@@ -1,0 +1,8 @@
+# database
+*.db
+
+# ENV variables
+.env
+
+# backend
+/backend/node_modules
