@@ -8,8 +8,7 @@
     const password = ref('');
     const errorMessage = ref('');
 
-    // TODO: delete this line
-    const apiKey = "0f93dc23e476cfde010970a5092b97e0e987f598c130e580a00930db94c6e920";
+    const apiKey = import.meta.env.VITE_API_KEY;
 
     const signInUser = async () => {
         try {
