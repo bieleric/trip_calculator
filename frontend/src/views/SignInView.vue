@@ -1,0 +1,61 @@
+<script setup>
+    import { ref } from 'vue';
+    import axios from 'axios';
+    import router from '@/router';
+    import Button from '@/components/Button.vue';
+
+    const email = ref('');
+    const password = ref('');
+    const errorMessage = ref('');
+
+    // TODO: delete this line
+    const apiKey = "0f93dc23e476cfde010970a5092b97e0e987f598c130e580a00930db94c6e920";
+
+    const signInUser = async () => {
+        try {
+            const response = await axios.post('http://localhost:3000/signIn', {
+                email: email.value,
+                password: password.value
+            }, {
+                headers: {
+                    'x-api-key': apiKey
+                }
+            });
+
+            // TODO: probably load data here and store it in stores
+
+            router.push('/');
+
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                errorMessage.value = 'Ungültige Anmeldedaten';
+            } 
+            else {
+                errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+            }
+        }
+    };
+</script>
+
+<template>
+    <div class="h-dvh grid justify-items-center content-center bg-zinc-800 overflow-hidden text-slate-300">
+        <div class="logo w-7/12 md:w-3/12">
+            <img src="/logo.png" alt="Logo">
+        </div>
+        <div class="login mt-20">
+            <p class="text-2xl">Melde dich an</p>
+            <div>
+                <form @submit.prevent="signInUser">
+                    <div class="my-3">
+                        <input v-model="email" name="email" type="email" autocomplete="email" required class="w-full text-sm px-4 py-3 outline-none border-2 focus:border-slate-500 text-zinc-800" placeholder="E-Mail" />
+                    </div>
+                    <div class="mb-5">
+                        <input v-model="password" name="password" type="password" autocomplete="current-password" required class="w-full text-sm px-4 py-3 outline-none border-2 focus:border-slate-500 text-zinc-800" placeholder="Passwort" />
+                    </div>
+                    <p v-if="errorMessage" class="error mb-3 text-red-500">{{ errorMessage }}</p>
+                    <button type="submit"><Button button-text="Anmelden"></Button></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</template>

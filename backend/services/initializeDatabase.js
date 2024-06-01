@@ -87,14 +87,21 @@ function initializeUsersTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, createdAt TIMESTAMP DEFAULT      CURRENT_TIMESTAMP, role_id INTEGER, FOREIGN KEY (role_id) REFERENCES roles(role_id))", function(err) {
+            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, password TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, role_id INTEGER, FOREIGN KEY (role_id) REFERENCES roles(role_id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'users': ", err.message);
                     callback(false);
                 } 
                 else {
-                    console.log("Tabelle 'users' erfolgreich erstellt.");
-                    callback(true);
+                    db.run("INSERT INTO users (name, email, password, role_id) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 1)", function(err) {
+                        if (err) {
+                            console.error("Fehler beim Initialisieren der Tabelle 'users': ", err.message);
+                            callback(false);
+                        } else {
+                            console.log("Tabelle 'users' erfolgreich initialisiert.");
+                            callback(true);
+                        }
+                    });
                 }
             });
         } 
@@ -141,14 +148,21 @@ function initializeAdminSettingsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, primary_color TEXT NOT NULL DEFAULT '#369551', secondary_color TEXT NOT NULL DEFAULT '#FFFFFF', budget REAL NOT NULL DEFAULT 500)", function(err) {
+            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, primary_color TEXT NOT NULL, secondary_color TEXT NOT NULL, budget REAL NOT NULL)", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'admin_settings': ", err.message);
                     callback(false);
                 } 
                 else {
-                    console.log("Tabelle 'admin_settings' erfolgreich erstellt.");
-                    callback(true);
+                    db.run("INSERT INTO admin_settings (primary_color, secondary_color, budget) VALUES ('#FF8200', '#FFFFFF', 500)", function(err) {
+                        if (err) {
+                            console.error("Fehler beim Initialisieren der Tabelle 'admin_settings': ", err.message);
+                            callback(false);
+                        } else {
+                            console.log("Tabelle 'admin_settings' erfolgreich initialisiert.");
+                            callback(true);
+                        }
+                    });
                 }
             });
         } 
