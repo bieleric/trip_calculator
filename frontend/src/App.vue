@@ -1,5 +1,11 @@
 <script setup>
-  import { RouterView } from 'vue-router'
+  import { RouterView, useRoute } from 'vue-router'
+  import { fetchAllData } from './services/apiRequests';
+  import { isTokenExpired } from './services/helpers';
+
+  if(!isTokenExpired()) {
+    fetchAllData();
+  }
 </script>
 
 <template>

@@ -1,0 +1,33 @@
+import { defineStore } from 'pinia'
+
+const getDefaultState = () => {
+    return {
+        users: [],
+    }
+}
+
+export const useUserStore = defineStore('userStore', {
+    state: () => getDefaultState(),
+    getters: {
+        getAllUsers: (state) => state.users,
+        getActiveUsers: (state) => state.users.filter(user => user.active === 1),
+        getInactiveUsers: (state) => state.users.filter(user => user.active === 0),
+    },
+    actions: {
+        setupUsersStore(data) {
+            data.forEach((user) => {
+                user['role_name'] = user.role_id === 1 ? 'Admin' : 'Nutzer';
+                this.users.push(user);
+            })
+        },
+        addUser(email, name, role, active) {
+            this.users.push({ email, name, role_id: role, active, role_name: Number(role) === 1 ? 'Admin' : 'Nutzer' });
+        },
+        deleteUser(email) {
+            this.users = this.users.filter(user => user.email !== email)
+        },
+        resetStore() {
+            Object.assign(this, getDefaultState());
+        }
+    }
+})

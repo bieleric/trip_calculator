@@ -2,6 +2,7 @@
     import { ref } from 'vue';
     import axios from 'axios';
     import router from '@/router';
+    import { fetchAllData } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
 
     const email = ref('');
@@ -21,8 +22,8 @@
                 }
             });
 
-            // TODO: probably load data here and store it in stores
-
+            localStorage.setItem("jwt", response.data.token);
+            fetchAllData();
             router.push('/');
 
         } catch (error) {

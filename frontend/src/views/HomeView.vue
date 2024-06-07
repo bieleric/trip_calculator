@@ -1,28 +1,10 @@
 <script setup>
-  import axios from 'axios';
   import BaseLayout from "@/layouts/BaseLayout.vue";
   import Button from "@/components/Button.vue";
   import TripBanner from "@/components/TripBanner.vue";
-  import { useSettingsStore } from '../stores/settingsStore';
+  import { useFavoritesStore } from '@/stores/favoritesStore';
 
-  const settingsStore = useSettingsStore();
-  const apiKey = import.meta.env.VITE_API_KEY;
-
-  const fetchAdminSettings = async () => {
-    axios.get('http://localhost:3000/api/adminSettings', {
-      headers: {
-        'x-api-key': apiKey
-      }
-    })
-    .then(response => {
-      settingsStore.setupSettings(response.data.data[0])
-    })
-    .catch(error => {
-      console.error('Fehler beim Abrufen der Daten:', error);
-    });
-  };
-
-  fetchAdminSettings();
+  const favoritesStore = useFavoritesStore();
 </script>
 
 <template>
@@ -31,10 +13,11 @@
         <RouterLink to="newTrip"><Button buttonText="Neue Fahrt hinzufügen" class="mb-4"></Button></RouterLink>
         <RouterLink to="myTrips"><Button buttonText="Meine Fahrten"></Button></RouterLink>
         <div class="favorites mt-5">
-          <p class="text-2xl w-11/12 mx-auto mb-3">Favoriten</p>
-          <TripBanner>
-
-          </TripBanner>
+          <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Favoriten</p>
+            <div v-for="favorite in favoritesStore.getFavorites">
+              <TripBanner :data="favorite" :favoritesBanner="true"></TripBanner>
+            </div>
+            <p v-if="favoritesStore.getFavorites.length === 0" class="text-sm text-center">Keine Favoriten gefunden</p>
         </div>
       </div>
     </BaseLayout>

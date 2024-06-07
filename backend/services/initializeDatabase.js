@@ -30,6 +30,16 @@ function checkDatabaseAndCreateTables(db) {
                 resolve(true);
             }
         });
+        initializeFavoritesTable(db, (success) => {
+            if (!success) {
+                console.error("Fehler beim Initialisieren der Tabelle 'favorites'.");
+                reject(false);
+            } 
+            else {
+                console.log("Die Tabelle 'favorites' ist einsatzbereit.");
+                resolve(true);
+            }
+        });
         initializeAdminSettingsTable(db, (success) => {
             if (!success) {
                 console.error("Fehler beim Initialisieren der Tabelle 'admin_settings'.");
@@ -87,13 +97,13 @@ function initializeUsersTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, password TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, role_id INTEGER, FOREIGN KEY (role_id) REFERENCES roles(role_id))", function(err) {
+            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, role_id INTEGER, active INTEGER NOT NULL, FOREIGN KEY (role_id) REFERENCES roles(role_id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'users': ", err.message);
                     callback(false);
                 } 
                 else {
-                    db.run("INSERT INTO users (name, email, password, role_id) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 1)", function(err) {
+                    db.run("INSERT INTO users (name, email, password, role_id, active) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 1, 1)", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'users': ", err.message);
                             callback(false);
@@ -121,7 +131,7 @@ function initializeTripsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, favorite INTEGER NOT NULL DEFAULT 0, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id))", function(err) {
+            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'trips': ", err.message);
                     callback(false);
@@ -139,6 +149,33 @@ function initializeTripsTable(db, callback) {
     });
 }
 
+function initializeFavoritesTable(db, callback) {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='favorites'", function(err, row) {
+        if (err) {
+            console.error("Fehler beim Abfragen der Tabelle 'favorites': ", err.message);
+            callback(false);
+            return;
+        }
+
+        if (!row) {
+            db.run("CREATE TABLE favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL,  transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id))", function(err) {
+                if (err) {
+                    console.error("Fehler beim Erstellen der Tabelle 'favorites': ", err.message);
+                    callback(false);
+                } 
+                else {
+                    console.log("Tabelle 'favorites' erfolgreich erstellt.");
+                    callback(true);
+                }
+            });
+        } 
+        else {
+            console.log("Die Tabelle 'favorites' bereits erstellt.");
+            callback(true);
+        }
+    });
+}
+
 function initializeAdminSettingsTable(db, callback) {
     db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_settings'", function(err, row) {
         if (err) {
@@ -148,13 +185,13 @@ function initializeAdminSettingsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, primary_color TEXT NOT NULL, secondary_color TEXT NOT NULL, budget REAL NOT NULL)", function(err) {
+            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, primary_color TEXT NOT NULL, secondary_color TEXT NOT NULL, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL)", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'admin_settings': ", err.message);
                     callback(false);
                 } 
                 else {
-                    db.run("INSERT INTO admin_settings (primary_color, secondary_color, budget) VALUES ('#FF8200', '#FFFFFF', 500)", function(err) {
+                    db.run("INSERT INTO admin_settings (primary_color, secondary_color, budget, price_per_kilometer) VALUES ('#FF8200', '#FFFFFF', 500, 0.3)", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'admin_settings': ", err.message);
                             callback(false);

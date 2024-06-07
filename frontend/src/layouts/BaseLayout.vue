@@ -3,12 +3,10 @@
     import { useSettingsStore } from '../stores/settingsStore';
 
     const settingsStore = useSettingsStore();
-
-    // TODO: overlapping background is a problem
 </script>
 
 <template>
-    <main class="relative h-dvh text-slate-300 overflow-hidden">
+    <main class="relative h-dvh text-slate-300 overflow-x-hidden">
         <div class="background" :style="'background: linear-gradient(to bottom right,' + settingsStore.getPrimaryColorInRGBA + ', ' + settingsStore.getSecondaryColorInRGBA + ')'"></div>
         <div class="content">
             <Sidebar />
