@@ -4,17 +4,20 @@ import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useMyTripsStore } from "@/stores/myTripsStore";
 import { useAllTripsStore } from "@/stores/allTripsStore";
+import { useClosingsStore } from "@/stores/closingsStore";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 
+// fetch data
 export const fetchAllData = async (isAdmin) => {
     try {
-        fetchAdminSettings();
-        fetchAllUsers();
-        fetchFavoritesOfUser();
-        fetchTripsOfUser();
+        await fetchAdminSettings();
+        await fetchAllUsers();
+        await fetchFavoritesOfUser();
+        await fetchTripsOfUser();
+        await fetchClosings();
         if(isAdmin) {
-            fetchAllTrips();
+            await fetchAllTrips();
         }
     } catch (err) {
         console.error('Fehler beim Abrufen der Daten:', err);
@@ -96,6 +99,22 @@ export const fetchAllTrips = async () => {
     .then(response => {
         const allTripsStore = useAllTripsStore();
         allTripsStore.setupAllTripsStore(response.data.allTrips);
+    })
+    .catch(err => {
+        console.error('Fehler beim Abrufen der Daten:', err);
+    });
+};
+
+export const fetchClosings = async () => {
+    axios.get('http://localhost:3000/api/closings', {
+      headers: {
+        'x-api-key': apiKey,
+        'Authorization': localStorage.getItem('jwt')
+      }
+    })
+    .then(response => {
+        const closingsStore = useClosingsStore();
+        closingsStore.setupClosingsStore(response.data.closings);
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
@@ -272,6 +291,7 @@ export const updateFavorite = async (id, transport, start, destination, costs, d
     });
 };
 
+// Admin Settings Endpoints
 export const updateFinanceSettings = async (budget, pricePerKilometer) => {
     axios.post(`http://localhost:3000/api/adminSettings`, {
         budget: budget,
@@ -291,5 +311,41 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
     })
     .catch(err => {
         console.error('Fehler beim Update des Favoriten:', err)
+    });
+};
+
+// Closings Endpoints
+export const addClosing = async (period) => {
+    axios.post(`http://localhost:3000/api/closings`, {
+        period: period,
+        closed: 1
+    }, {
+        headers: {
+            'x-api-key': apiKey,
+            'Authorization': localStorage.getItem('jwt')
+        }
+    })
+    .then(response => {
+        const closingStore = useClosingsStore();
+        closingStore.addClosing(response.data.closing);
+    })
+    .catch(err => {
+        console.error('Fehler beim Hinzufügen des Abschlusses:', err)
+    });
+};
+
+export const deleteClosing = async (id) => {
+    axios.delete(`http://localhost:3000/api/closings/${id}`, {
+        headers: {
+            'x-api-key': apiKey,
+            'Authorization': localStorage.getItem('jwt')
+        }
+    })
+    .then(response => {
+        const closingsStore = useClosingsStore();
+        closingsStore.deleteClosing(id);
+    })
+    .catch(err => {
+        console.error('Fehler beim Löschen des Abschlusses:', err)
     });
 };

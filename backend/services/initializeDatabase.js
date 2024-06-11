@@ -50,6 +50,16 @@ function checkDatabaseAndCreateTables(db) {
                 resolve(true);
             }
         });
+        initializeClosingsTable(db, (success) => {
+            if (!success) {
+                console.error("Fehler beim Initialisieren der Tabelle 'closings'.");
+                reject(false);
+            } 
+            else {
+                console.log("Die Tabelle 'closings' ist einsatzbereit.");
+                resolve(true);
+            }
+        });
     });
 }
 
@@ -205,6 +215,33 @@ function initializeAdminSettingsTable(db, callback) {
         } 
         else {
             console.log("Die Tabelle 'admin_settings' bereits erstellt.");
+            callback(true);
+        }
+    });
+}
+
+function initializeClosingsTable(db, callback) {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='closings'", function(err, row) {
+        if (err) {
+            console.error("Fehler beim Abfragen der Tabelle 'closings': ", err.message);
+            callback(false);
+            return;
+        }
+
+        if (!row) {
+            db.run("CREATE TABLE closings (id INTEGER PRIMARY KEY AUTOINCREMENT, period TIMESTAMP NOT NULL UNIQUE, closed INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)", function(err) {
+                if (err) {
+                    console.error("Fehler beim Erstellen der Tabelle 'closings': ", err.message);
+                    callback(false);
+                } 
+                else {
+                    console.log("Tabelle 'closings' erfolgreich initialisiert.");
+                    callback(true);
+                }
+            });
+        } 
+        else {
+            console.log("Die Tabelle 'closings' bereits erstellt.");
             callback(true);
         }
     });

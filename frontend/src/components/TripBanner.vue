@@ -1,5 +1,7 @@
 <script setup>
     import { ref } from 'vue';
+    import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+    import { faStar } from '@fortawesome/free-solid-svg-icons';
     import ConfirmDeletionModal from './ConfirmDeletionModal.vue';
     import { deleteFavorite, deleteTrip } from '@/services/apiRequests';
     import { formatDate } from '@/services/helpers';
@@ -72,7 +74,9 @@
         <div class="grid grid-cols-8 text-zinc-400 text-sm">
             <p class="col-span-3 text-left">{{ singleTrip }}</p>
             <p class="col-span-2 text-center">{{ transportType }}</p>
-            <p @click="openDeleteModal(data)" v-if="favoritesBanner" class="col-span-3 text-right pr-2 cursor-pointer text-yellow-500">Stern</p>
+            <p @click="openDeleteModal(data)" v-if="favoritesBanner" class="col-span-3 text-right pr-2 cursor-pointer text-yellow-500">
+                <FontAwesomeIcon :icon="faStar" />
+            </p>
             <p v-if="!favoritesBanner" class="col-span-3 text-right pr-2">{{ date }}</p>
         </div>
         <div class="border-t border-zinc-600 mt-3"></div>

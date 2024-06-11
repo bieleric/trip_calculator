@@ -29,3 +29,5 @@ export const formatDate = (dateString) => {
 
   return `${day}, ${formattedDate}`;
 }
+
+export const getMonthsNames = () => ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'September', 'Oktober', 'November', 'Dezember'];

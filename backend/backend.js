@@ -340,6 +340,51 @@ app.post('/api/adminSettings', validateApiKey, validateToken, authorizeAdmin, (r
   });
 });
 
+// Closings Endpoints
+app.get('/api/closings', validateApiKey, validateToken, (req, res) => {
+  db.all("SELECT * FROM closings", (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    return res.status(200).json({ message: 'success', closings: rows });
+  });
+});
+
+app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { period, closed } = req.body;
+
+  db.run("INSERT INTO closings (period, closed) VALUES (?, ?)", [period, closed], (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    db.get("SELECT * FROM closings ORDER BY id DESC LIMIT 1", (err, closingRow) => {
+      if(err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      return res.status(200).json({ message: 'success', closing: closingRow });
+    });
+  });
+});
+
+app.delete('/api/closings/:id', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const closingId = req.params.id;
+
+  db.run("DELETE FROM closings WHERE id = ?", [closingId], function(err) {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Closing not found' });
+    }
+
+    return res.status(200).json({ message: 'Success' });
+  });
+});
+
 
 // TODO: adopt jwt verification
 app.get('/api/roles', validateApiKey, (req, res) => {

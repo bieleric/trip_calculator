@@ -14,6 +14,7 @@ import { useMyTripsStore } from '@/stores/myTripsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
 import { useAllTripsStore } from '@/stores/allTripsStore';
+import { useClosingsStore } from '@/stores/closingsStore';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -101,6 +102,7 @@ router.beforeEach(async (to, from, next) => {
       useFavoritesStore().resetStore();
       useMyTripsStore().resetStore();
       useAllTripsStore().resetStore();
+      useClosingsStore().resetStore();
       localStorage.removeItem('jwt');
       console.error('Session expired');
       return next('/signIn');

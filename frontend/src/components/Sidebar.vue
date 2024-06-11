@@ -7,6 +7,7 @@
     import { useFavoritesStore } from '@/stores/favoritesStore';
     import { useMyTripsStore } from '@/stores/myTripsStore';
     import { useAllTripsStore } from '@/stores/allTripsStore';
+import { useClosingsStore } from '@/stores/closingsStore';
 
     const isOpen = ref(false);
 
@@ -20,6 +21,7 @@
         useFavoritesStore().resetStore();
         useMyTripsStore().resetStore();
         useAllTripsStore().resetStore();
+        useClosingsStore().resetStore();
         localStorage.removeItem('jwt');
         router.push('/signIn');
     }

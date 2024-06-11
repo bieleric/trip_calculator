@@ -1,8 +1,24 @@
 <script setup>
+  import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+  import { faCircleCheck } from '@fortawesome/free-solid-svg-icons';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import { useAllTripsStore } from '@/stores/allTripsStore';
+  import { useClosingsStore } from '@/stores/closingsStore';
+  import { getMonthsNames } from "@/services/helpers";
 
   const allTripsStore = useAllTripsStore();
+  const closingsStore = useClosingsStore();
+
+  const isClosed = (period) => {
+    const month = period.split(' ')[0];
+    const monthNumeral = getMonthsNames().indexOf(month) + 1;
+    const year = period.split(' ')[1];
+    const dateString = `${monthNumeral}-01-${year}`;
+    const foundClosing = closingsStore.getAllClosings.find((closing) => {
+      return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
+    });
+    return !!foundClosing;
+  };
 </script>
 
 <template>
@@ -16,7 +32,12 @@
             monthName: month.title,
           }
         }">
-          <p class="p-3">{{ month.title }}</p>
+          <p class="flex justify-between p-3">
+            <span>{{ month.title }} </span>
+            <span v-if="isClosed(month.title)">
+              <FontAwesomeIcon :icon="faCircleCheck" />
+            </span>
+          </p>
         </RouterLink>
       </div>
     </div>
