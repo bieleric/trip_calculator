@@ -4,6 +4,7 @@
     import router from '@/router';
     import { fetchAllData } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
+import { isAdmin } from '@/services/helpers';
 
     const email = ref('');
     const password = ref('');
@@ -23,7 +24,7 @@
             });
 
             localStorage.setItem("jwt", response.data.token);
-            fetchAllData();
+            fetchAllData(isAdmin());
             router.push('/');
 
         } catch (error) {

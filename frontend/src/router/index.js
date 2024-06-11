@@ -7,11 +7,13 @@ import MyTripsView from '@/views/MyTripsView.vue'
 import userAdministrationView from '@/views/UserAdministrationView.vue';
 import SetPasswordView from '@/views/SetPasswordView.vue';
 import FinanceAdministrationView from '@/views/FinanceAdministrationView.vue';
+import ClosingAdministrationOverviewView from '@/views/ClosingAdministrationOverviewView.vue';
 import ClosingAdministrationView from '@/views/ClosingAdministrationView.vue';
 import { useFavoritesStore } from '@/stores/favoritesStore';
 import { useMyTripsStore } from '@/stores/myTripsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
+import { useAllTripsStore } from '@/stores/allTripsStore';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -70,13 +72,23 @@ const router = createRouter({
       }
     },
     {
+      path: '/closingAdministrationOverview',
+      name: 'closingAdministrationOverview',
+      component: ClosingAdministrationOverviewView,
+      meta: {
+        requiresAuth: true,
+        requiresAdminRole: true
+      }
+    },
+    {
       path: '/closingAdministration',
       name: 'closingAdministration',
       component: ClosingAdministrationView,
       meta: {
         requiresAuth: true,
         requiresAdminRole: true
-      }
+      },
+      props: route => ({ monthName: route.query.monthName })
     },
   ]
 })
@@ -88,6 +100,7 @@ router.beforeEach(async (to, from, next) => {
       useSettingsStore().resetStore();
       useFavoritesStore().resetStore();
       useMyTripsStore().resetStore();
+      useAllTripsStore().resetStore();
       localStorage.removeItem('jwt');
       console.error('Session expired');
       return next('/signIn');

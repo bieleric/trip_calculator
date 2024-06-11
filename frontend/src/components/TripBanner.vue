@@ -7,6 +7,7 @@
 
     const props = defineProps({
         favoritesBanner: Boolean,
+        closing: Boolean,
         data: Object,
     })
 
@@ -85,8 +86,8 @@
             <p class="col-span-3">{{ data.destination }}</p>
             <p class="col-span-2">{{ costs }}€</p>
         </div>
-        <div class="border-t border-zinc-600 mt-5"></div>
-        <div class="grid grid-cols-2">
+        <div v-if="!props.closing" class="border-t border-zinc-600 mt-5"></div>
+        <div v-if="!props.closing" class="grid grid-cols-2">
             <RouterLink v-if="favoritesBanner" class="col-span-2" :to="{name: 'newTrip', query: {
                 transport: data.transport,
                 start: data.start, 

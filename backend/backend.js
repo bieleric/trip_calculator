@@ -85,7 +85,7 @@ app.post('/signIn', (req, res) => {
 });
 
 // User Endpoints
-// TODO: should not be fetched all users on user level 'user'
+// TODO: should not fetch all users on user level 'user'
 app.get('/api/users', validateApiKey, validateToken, (req, res) => {
   db.all("SELECT * FROM users", [], (err, rows) => {
     if (err) {
@@ -122,6 +122,7 @@ app.delete('/api/users/:email', validateApiKey, validateToken, authorizeAdmin, (
   });
 });
 
+// Trips Endpoints
 app.get('/api/trips', validateApiKey, validateToken, (req, res) => {
   const token = req.headers['authorization'];
   let userId = '';
@@ -139,7 +140,6 @@ app.get('/api/trips', validateApiKey, validateToken, (req, res) => {
   });
 });
 
-// Trips Endpoints
 app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
   const { transport, start, destination, costs, distance, singleTrip, date, favorites } = req.body;
   const token = req.headers['authorization'];
@@ -236,6 +236,16 @@ app.post('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
     }
 
     return res.status(200).json({ message: 'Success' });
+  });
+});
+
+app.get('/api/allTrips', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  db.all("SELECT * FROM trips", (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    return res.status(200).json({ message: 'success', allTrips: rows });
   });
 });
 

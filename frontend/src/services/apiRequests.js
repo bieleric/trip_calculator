@@ -3,15 +3,19 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useMyTripsStore } from "@/stores/myTripsStore";
+import { useAllTripsStore } from "@/stores/allTripsStore";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 
-export const fetchAllData = async () => {
+export const fetchAllData = async (isAdmin) => {
     try {
         fetchAdminSettings();
         fetchAllUsers();
         fetchFavoritesOfUser();
         fetchTripsOfUser();
+        if(isAdmin) {
+            fetchAllTrips();
+        }
     } catch (err) {
         console.error('Fehler beim Abrufen der Daten:', err);
         return false;
@@ -82,6 +86,22 @@ export const fetchTripsOfUser = async () => {
     });
 };
 
+export const fetchAllTrips = async () => {
+    axios.get('http://localhost:3000/api/allTrips', {
+      headers: {
+        'x-api-key': apiKey,
+        'Authorization': localStorage.getItem('jwt')
+      }
+    })
+    .then(response => {
+        const allTripsStore = useAllTripsStore();
+        allTripsStore.setupAllTripsStore(response.data.allTrips);
+    })
+    .catch(err => {
+        console.error('Fehler beim Abrufen der Daten:', err);
+    });
+};
+
 // User Endpoints
 export const deleteUser = async (email) => {
     axios.delete(`http://localhost:3000/api/users/${email}`, {
@@ -143,6 +163,9 @@ export const addTrip = async (transport, start, destination, costs, distance, si
         }
         const myTripsStore = useMyTripsStore();
         myTripsStore.addTrip(response.data.trip);
+
+        const allTripsStore = useAllTripsStore();
+        allTripsStore.addTrip(response.data.trip);
     })
     .catch(err => {
         console.error('Fehler beim Hinzufügen der Fahrt:', err);
@@ -159,6 +182,9 @@ export const deleteTrip = async (id) => {
     .then(response => {
         const myTripsStore = useMyTripsStore();
         myTripsStore.deleteTrip(id);
+
+        const allTripsStore = useAllTripsStore();
+        allTripsStore.deleteTrip(id);
     })
     .catch(err => {
         console.error('Fehler beim Löschen der Fahrt:', err)

@@ -54,6 +54,14 @@
 
   const submitUpdateFinanceSettings = () => {
     updateFinanceSettings(budget.value, pricePerKilometer.value)
+    .then(response => {
+          message.value = "Änderungen wurden übernommen.";
+          error.value = false;
+      })
+      .catch(err => {
+          message.value = "Fehler! Finanzeinstellungen konnten nicht aktualisiert werden.";
+          error.value = true;
+      });
   }
 </script>
 

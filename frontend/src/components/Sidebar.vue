@@ -6,6 +6,7 @@
     import { useSettingsStore } from '@/stores/settingsStore';
     import { useFavoritesStore } from '@/stores/favoritesStore';
     import { useMyTripsStore } from '@/stores/myTripsStore';
+    import { useAllTripsStore } from '@/stores/allTripsStore';
 
     const isOpen = ref(false);
 
@@ -18,6 +19,7 @@
         useSettingsStore().resetStore();
         useFavoritesStore().resetStore();
         useMyTripsStore().resetStore();
+        useAllTripsStore().resetStore();
         localStorage.removeItem('jwt');
         router.push('/signIn');
     }
@@ -52,7 +54,7 @@
                     <li v-if="isAdmin()" class="pt-8 pb-3 text-orange-400 font-bold">Administration</li>
                     <RouterLink  v-if="isAdmin()" to="userAdministration"><li class="py-2">Nutzerverwaltung</li></RouterLink>
                     <RouterLink  v-if="isAdmin()" to="financeAdministration"><li class="py-2">Finanzeinstellungen</li></RouterLink>
-                    <RouterLink  v-if="isAdmin()" to="closingAdministration"><li class="py-2">Abschluss</li></RouterLink>
+                    <RouterLink  v-if="isAdmin()" to="closingAdministrationOverview"><li class="py-2">Abschluss</li></RouterLink>
                     <li class="pt-8 pb-3 text-orange-400 font-bold">Account</li>
                     <li class="py-2">Einstellungen</li>
                     <li class="py-2">App-Design</li>

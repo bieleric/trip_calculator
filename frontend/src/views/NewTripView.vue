@@ -4,6 +4,7 @@
   import Button from '@/components/Button.vue';
   import RadioButtonGroup from '@/components/inputs/RadioButtonGroup.vue';
   import TextInput from '@/components/inputs/TextInput.vue';
+  import Date from '@/components/inputs/Date.vue';
   import Switch from '@/components/inputs/Switch.vue';
   import { addTrip, updateTrip, updateFavorite } from '@/services/apiRequests';
 
@@ -163,12 +164,15 @@
             :unit="unit"
             v-model="costsOrDistance"
           ></TextInput>
+          <Date
+            name="Datum"
+            v-model="date"
+          ></Date>
           <Switch
             name="Rückfahrt"
             :optionalInformation="optionalInformation"
             v-model="withReturn"
           ></Switch>
-          <input type="date" :class="{'mt-5': true, 'mb-10': favorite || props.edit, 'mb-5': !favorite }" v-model="date" required />
           <Switch
             v-if="!favorite && !props.edit"
             name="Favoriten"

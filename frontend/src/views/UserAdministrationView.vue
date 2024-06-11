@@ -68,7 +68,7 @@
           <button type="submit" class="block mx-auto"><Button button-text="Einladung senden"></Button></button>
         </form>
       </div>
-      <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3 mt-12">Aktiv</p>
+      <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3 mt-20">Aktiv</p>
       <div v-for="user in userStore.getActiveUsers" class="w-full md:w-3/4 bg-zinc-700 px-2 py-3 mx-auto mb-4">
         <p class="text-xl">{{ user.name }}</p>
         <div class="grid grid-cols-8 mt-4 text-zinc-400 text-sm">
