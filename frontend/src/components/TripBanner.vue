@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed } from 'vue';
+    import { ref } from 'vue';
     import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
     import { faStar } from '@fortawesome/free-solid-svg-icons';
     import ConfirmDeletionModal from './ConfirmDeletionModal.vue';

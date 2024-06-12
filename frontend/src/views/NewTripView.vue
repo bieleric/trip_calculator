@@ -1,12 +1,13 @@
 <script setup>
-  import { computed, ref, watch } from 'vue';
+  import { computed, ref } from 'vue';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import Button from '@/components/Button.vue';
   import RadioButtonGroup from '@/components/inputs/RadioButtonGroup.vue';
   import TextInput from '@/components/inputs/TextInput.vue';
-  import Date from '@/components/inputs/Date.vue';
+  import DateInput from '@/components/inputs/DateInput.vue';
   import Switch from '@/components/inputs/Switch.vue';
   import { addTrip, updateTrip, updateFavorite } from '@/services/apiRequests';
+  import { useClosingsStore } from '@/stores/closingsStore';
 
   const props = defineProps({
     transport: {
@@ -54,6 +55,8 @@
       default: ''
     },
   });
+
+  const closingsStore = useClosingsStore();
 
   let selectedTransportType = ref('');
   let start = ref('');
@@ -106,6 +109,21 @@
       });
     }
     else {
+      const month = new Date(date.value).getMonth();
+      const year = new Date(date.value).getFullYear();
+
+      const closing = closingsStore.getAllClosings.find((closing) => {
+          const closingMonth = new Date(closing.period).getMonth();
+          const closingYear = new Date(closing.period).getFullYear();
+          return closingMonth === month && closingYear === year;
+      });
+
+      if(closing) {
+        message.value = "Fahrt kann nich thinzugefügt werden. Zeitraum bereits abgeschlossen.";
+        error.value = true;
+        return;
+      }
+
       addTrip(selectedTransportType.value, start.value, destination.value, costs, distance, !withReturn.value, date.value, favorites.value)
       .then(response => {
           message.value = "Fahrt wurde hinzugefügt.";
@@ -164,10 +182,10 @@
             :unit="unit"
             v-model="costsOrDistance"
           ></TextInput>
-          <Date
+          <DateInput
             name="Datum"
             v-model="date"
-          ></Date>
+          ></DateInput>
           <Switch
             name="Rückfahrt"
             :optionalInformation="optionalInformation"
