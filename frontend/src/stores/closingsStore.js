@@ -10,6 +10,15 @@ export const useClosingsStore = defineStore('closingsStore', {
     state: () => getDefaultState(),
     getters: {
         getAllClosings: (state) => state.closings,
+        getClosingByMonthAndYear: (state) => {
+            return (month, year) => {
+                return state.getAllClosings.find(closing => {
+                    const closingMonth = new Date(closing.period).getMonth() + 1;
+                    const closingYear = new Date(closing.period).getFullYear();
+                    return closingMonth === month && closingYear === year;
+                })
+            }
+        }
     },
     actions: {
         setupClosingsStore(data) {
@@ -18,7 +27,7 @@ export const useClosingsStore = defineStore('closingsStore', {
             })
         },
         addClosing(data) {
-            this.closings.push({ id: data.id, period: data.period, createdAt: data.created_at });
+            this.closings.push(data);
         },
         deleteClosing(id) {
             this.closings = this.closings.filter(closing => closing.id !== id);

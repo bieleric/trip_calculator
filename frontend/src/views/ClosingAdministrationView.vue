@@ -20,12 +20,13 @@
     monthName: {
       type: String,
       default: ''
-    },
+    }
   });
 
   let message = ref('');
   let error = ref(false);
   let buttonText = ref('');
+  let closing = ref(null);
 
   const month = props.monthName.split(' ')[0];
   const monthNumeral = getMonthsNames().indexOf(month) + 1;
@@ -37,6 +38,7 @@
       return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
     });
     if (foundClosing) {
+      closing.value = foundClosing;
       buttonText.value = 'Abgeschlossen';
       return true;
     } else {
@@ -49,8 +51,17 @@
     return allTripsStore.getCostsOfMonthByMonthName(props.monthName)
   });
 
+  const budget = computed(() => {
+    if(closing.value) {
+      return isClosed ? closing.value.budget : settingsStore.getBudget;
+    }
+    else {
+      return settingsStore.getBudget;
+    }
+  });
+
   const remainingBudget = computed(() => {
-    const value = (settingsStore.getBudget - costsOfMonth.value).toFixed(2);
+    const value = (budget.value - costsOfMonth.value).toFixed(2)
     return value < 0 ? 0.00 : value;
   });
 
@@ -67,9 +78,10 @@
           message.value = "Fehler! Abschluss konnte nicht rückgängig gemacht werden.";
           error.value = true;
       });
-    } else {
+    } 
+    else {
       const period = new Date(dateString).toDateString();
-      addClosing(period)
+      addClosing(period, settingsStore.getBudget, settingsStore.getPricePerKilometer)
       .then(response => {
           error.value = false;
       })
@@ -84,9 +96,9 @@
 
 <template>
   <BaseLayout>
-    <div class="closing">
+    <div class="closings">
       <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-5">Abschluss - {{ props.monthName }}</p>
-      <p class="w-11/12 md:w-3/4 mx-auto mb-3">Budget: {{ settingsStore.getBudget }}€</p>
+      <p class="w-11/12 md:w-3/4 mx-auto mb-3">Budget: {{ budget }}€</p>
       <p class="w-11/12 md:w-3/4 mx-auto mb-3">Gesamtkosten: {{ allTripsStore.getCostsOfMonthByMonthName(props.monthName) }}€</p>
       <p class="w-11/12 md:w-3/4 mx-auto mb-10">verbleibendes Budget: {{ remainingBudget }}€</p>
       <p v-if="message" :class="{ 'error mb-3': true, 'text-red-500': error, 'text-green-500': !error }">{{ message }}</p>

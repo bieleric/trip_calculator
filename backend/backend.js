@@ -85,7 +85,6 @@ app.post('/signIn', (req, res) => {
 });
 
 // User Endpoints
-// TODO: should not fetch all users on user level 'user'
 app.get('/api/users', validateApiKey, validateToken, (req, res) => {
   db.all("SELECT * FROM users", [], (err, rows) => {
     if (err) {
@@ -239,7 +238,7 @@ app.post('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
   });
 });
 
-app.get('/api/allTrips', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+app.get('/api/allTrips', validateApiKey, validateToken, (req, res) => {
   db.all("SELECT * FROM trips", (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
@@ -352,9 +351,9 @@ app.get('/api/closings', validateApiKey, validateToken, (req, res) => {
 });
 
 app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { period, closed } = req.body;
+  const { period, closed, budget, pricePerKilometer } = req.body;
 
-  db.run("INSERT INTO closings (period, closed) VALUES (?, ?)", [period, closed], (err, rows) => {
+  db.run("INSERT INTO closings (period, closed, budget, price_per_kilometer) VALUES (?, ?, ?, ?)", [period, closed, budget, pricePerKilometer], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }

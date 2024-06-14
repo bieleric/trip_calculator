@@ -9,12 +9,14 @@ import SetPasswordView from '@/views/SetPasswordView.vue';
 import FinanceAdministrationView from '@/views/FinanceAdministrationView.vue';
 import ClosingAdministrationOverviewView from '@/views/ClosingAdministrationOverviewView.vue';
 import ClosingAdministrationView from '@/views/ClosingAdministrationView.vue';
+import ClosingView from '@/views/ClosingView.vue';
 import { useFavoritesStore } from '@/stores/favoritesStore';
 import { useMyTripsStore } from '@/stores/myTripsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
 import { useAllTripsStore } from '@/stores/allTripsStore';
 import { useClosingsStore } from '@/stores/closingsStore';
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,8 +80,8 @@ const router = createRouter({
       component: ClosingAdministrationOverviewView,
       meta: {
         requiresAuth: true,
-        requiresAdminRole: true
-      }
+      },
+      props: route => ({ userClosings: route.query.userClosings })
     },
     {
       path: '/closingAdministration',
@@ -88,6 +90,15 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         requiresAdminRole: true
+      },
+      props: route => ({ monthName: route.query.monthName })
+    },
+    {
+      path: '/closing',
+      name: 'closing',
+      component: ClosingView,
+      meta: {
+        requiresAuth: true,
       },
       props: route => ({ monthName: route.query.monthName })
     },

@@ -229,7 +229,7 @@ function initializeClosingsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE closings (id INTEGER PRIMARY KEY AUTOINCREMENT, period TIMESTAMP NOT NULL UNIQUE, closed INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)", function(err) {
+            db.run("CREATE TABLE closings (id INTEGER PRIMARY KEY AUTOINCREMENT, period TIMESTAMP NOT NULL UNIQUE, closed INTEGER NOT NULL, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'closings': ", err.message);
                     callback(false);

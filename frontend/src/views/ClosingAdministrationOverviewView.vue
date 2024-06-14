@@ -6,6 +6,13 @@
   import { useClosingsStore } from '@/stores/closingsStore';
   import { getMonthsNames } from "@/services/helpers";
 
+  const props = defineProps({
+    userClosings: {
+      type: String,
+      default: ''
+    }
+  });
+
   const allTripsStore = useAllTripsStore();
   const closingsStore = useClosingsStore();
 
@@ -24,10 +31,11 @@
 <template>
   <BaseLayout>
     <div class="closing">
-      <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschluss</p>
+      <p v-if="props.userClosings" class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschluss</p>
+      <p v-else class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschlussverwaltung</p>
       <div v-for="month in allTripsStore.getAllTripsClassified" class="w-11/12 md:w-3/4 mx-auto mb-3 border-b text-lg">
         <RouterLink :to="{
-          name: 'closingAdministration', 
+          name: props.userClosings ? 'closing' : 'closingAdministration', 
           query: {
             monthName: month.title,
           }

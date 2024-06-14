@@ -119,7 +119,7 @@
       });
 
       if(closing) {
-        message.value = "Fahrt kann nich thinzugefügt werden. Zeitraum bereits abgeschlossen.";
+        message.value = "Fahrt kann nicht hinzugefügt werden. Zeitraum bereits abgeschlossen.";
         error.value = true;
         return;
       }

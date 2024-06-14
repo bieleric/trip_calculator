@@ -18,6 +18,19 @@ export const isAdmin = () => {
     }
 }
 
+export const getUser = () => {
+  try {
+    const decodedJWT = jwtDecode(localStorage.getItem('jwt'));
+    return {
+      email: decodedJWT.email,
+      userId: decodedJWT.userId,
+      roleId: decodedJWT.role_id
+    }
+  } catch (err) {
+    return false;
+  }
+}
+
 export const formatDate = (dateString) => {
   const date = new Date(dateString);
 
@@ -31,3 +44,7 @@ export const formatDate = (dateString) => {
 }
 
 export const getMonthsNames = () => ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'September', 'Oktober', 'November', 'Dezember'];
+
+export const getMonthAsNumeral = (monthAsString) => {
+  return getMonthsNames().indexOf(monthAsString) + 1;
+}

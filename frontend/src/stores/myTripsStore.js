@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { useSettingsStore } from './settingsStore'
+import { useClosingsStore } from './closingsStore'
 
 const getDefaultState = () => {
     return {
@@ -53,6 +55,30 @@ export const useMyTripsStore = defineStore('myTripsStore', {
                 const date = new Date(`${year}-${state.monthNames.indexOf(month) + 1}-01`);
                 return date.getMonth() === new Date().getMonth() - 1;
             });
+        },
+        getStatsOfMonthByMonthName: (state) => {
+            return (monthName) => {
+                const settingsStore = useSettingsStore();
+                const closingsStore = useClosingsStore();
+
+                const tripsOfMonth = state.getAllMyTripsClassified.find(month => month.title === monthName)
+                let costsOfMonth = 0;
+                if(tripsOfMonth) {
+                    tripsOfMonth.trips.forEach(trip => {
+                        if(trip.costs) {
+                            costsOfMonth += trip.single_trip ? trip.costs : 2 * trip.costs;
+                        }
+                        else if(trip.distance) {
+                            costsOfMonth += trip.single_trip ? settingsStore.getPricePerKilometer * trip.distance : 2 * settingsStore.getPricePerKilometer * trip.distance;
+                        } 
+                    });
+                }
+
+                return {
+                    costs: costsOfMonth.toFixed(2),
+                    trips: tripsOfMonth ? tripsOfMonth.trips : []
+                }
+            }
         },
 
     },

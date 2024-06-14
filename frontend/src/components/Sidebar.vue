@@ -7,7 +7,7 @@
     import { useFavoritesStore } from '@/stores/favoritesStore';
     import { useMyTripsStore } from '@/stores/myTripsStore';
     import { useAllTripsStore } from '@/stores/allTripsStore';
-import { useClosingsStore } from '@/stores/closingsStore';
+    import { useClosingsStore } from '@/stores/closingsStore';
 
     const isOpen = ref(false);
 
@@ -52,11 +52,13 @@ import { useClosingsStore } from '@/stores/closingsStore';
                     <RouterLink to="/"><li class="py-2">Home</li></RouterLink>
                     <RouterLink to="newTrip"><li class="py-2">Fahrt hinzufügen</li></RouterLink>
                     <RouterLink to="myTrips"><li class="py-2">Meine Fahrten</li></RouterLink>
-                    <!--<RouterLink to="closing"><li class="py-2">Abschluss</li></RouterLink>-->
+                    <RouterLink :to="{ name: 'closingAdministrationOverview', query: {
+                        userClosings: true
+                    }}"><li class="py-2">Abschluss</li></RouterLink>
                     <li v-if="isAdmin()" class="pt-8 pb-3 text-orange-400 font-bold">Administration</li>
                     <RouterLink  v-if="isAdmin()" to="userAdministration"><li class="py-2">Nutzerverwaltung</li></RouterLink>
                     <RouterLink  v-if="isAdmin()" to="financeAdministration"><li class="py-2">Finanzeinstellungen</li></RouterLink>
-                    <RouterLink  v-if="isAdmin()" to="closingAdministrationOverview"><li class="py-2">Abschluss</li></RouterLink>
+                    <RouterLink  v-if="isAdmin()" to="closingAdministrationOverview"><li class="py-2">Abschlussverwaltung</li></RouterLink>
                     <li class="pt-8 pb-3 text-orange-400 font-bold">Account</li>
                     <li class="py-2">Einstellungen</li>
                     <li class="py-2">App-Design</li>

@@ -16,9 +16,7 @@ export const fetchAllData = async (isAdmin) => {
         await fetchFavoritesOfUser();
         await fetchTripsOfUser();
         await fetchClosings();
-        if(isAdmin) {
-            await fetchAllTrips();
-        }
+        await fetchAllTrips();
     } catch (err) {
         console.error('Fehler beim Abrufen der Daten:', err);
         return false;
@@ -315,10 +313,12 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
 };
 
 // Closings Endpoints
-export const addClosing = async (period) => {
+export const addClosing = async (period, budget, pricePerKilometer) => {
     axios.post(`http://localhost:3000/api/closings`, {
         period: period,
-        closed: 1
+        closed: 1,
+        budget: budget,
+        pricePerKilometer: pricePerKilometer
     }, {
         headers: {
             'x-api-key': apiKey,

@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { useSettingsStore } from './settingsStore';
+import { useClosingsStore } from './closingsStore';
 import { useUserStore } from './userStore';
+import { getMonthAsNumeral } from '@/services/helpers';
 
 const getDefaultState = () => {
     return {
@@ -16,7 +18,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         getAllTripsClassified: (state) => {
             const classifiedTrips = {};
 
-            state.allTrips.forEach((trip) => {
+            state.getAllTrips.forEach((trip) => {
                 const date = new Date(trip.date);
                 const monthYear = `${state.monthNames[date.getMonth()]} ${date.getFullYear()}`;
 
@@ -93,21 +95,21 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         getTripsClassifiedByUserForMonthAndYear: (state) => {
             const userStore = useUserStore();
 
-            return (monthName, year) => {
-                const monthIndex = state.monthNames.indexOf(monthName);
+            return (month, year) => {
+                const monthIndex = getMonthAsNumeral(month) - 1;
                 const classifiedByUser = {};
         
                 state.allTrips.forEach((trip) => {
                     const tripDate = new Date(trip.date);
                     const tripMonth = tripDate.getMonth();
                     const tripYear = tripDate.getFullYear();
-        
+
                     if (tripMonth === monthIndex && tripYear === year) {
                         const user = userStore.getActiveUsers.find(user => user.id === trip.user_id);
                         const userName = user ? user.name : 'Unknown User';
-        
+
                         if (!classifiedByUser[userName]) {
-                            classifiedByUser[userName] = { title: userName, trips: [] };
+                            classifiedByUser[userName] = { title: userName, userId: user.id, trips: [] };
                         }
                         
                         classifiedByUser[userName].trips.push(trip);
@@ -119,17 +121,22 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         },
         getCostsByUserForMonth: (state) => {
             const settingsStore = useSettingsStore();
-            return (userName, month, year) => {
+            const closingsStore = useClosingsStore();
+
+            return (userObject, month, year) => {
+                const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
+                const pricePerKilometer = closing ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
                 const classifiedByUser = state.getTripsClassifiedByUserForMonthAndYear(month, year);
                 let costs = 0;
+
                 classifiedByUser.map(user => {
-                    if(userName.title === user.title) {
+                    if(userObject.userId === user.userId) {
                         user.trips.forEach(trip => {
                             if(trip.costs) {
                                 costs += trip.single_trip ? trip.costs : 2 * trip.costs;
                             }
                             else if(trip.distance) {
-                                costs += trip.single_trip ? settingsStore.getPricePerKilometer * trip.distance : 2 * settingsStore.getPricePerKilometer * trip.distance;
+                                costs += trip.single_trip ? pricePerKilometer * trip.distance : 2 * pricePerKilometer * trip.distance;
                             }
                         });
                     }
@@ -139,16 +146,35 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         },
         getPendingAmountOfMoneyByUserForMonth: (state) => {
             const settingsStore = useSettingsStore();
-            return (userName, month, year) => {
+            const closingsStore = useClosingsStore();
+
+            return (userObject, month, year) => {
+                const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
+                const budget = closing ? closing.budget : settingsStore.getBudget;
                 const costsOfMonthByMonthName = state.getCostsOfMonthByMonthName(month + ' ' + year);
-                const costsByUserForMonth = state.getCostsByUserForMonth(userName, month, year);
-                if(settingsStore.getBudget === 0 || costsOfMonthByMonthName <= settingsStore.getBudget) {
+                const costsByUserForMonth = state.getCostsByUserForMonth(userObject, month, year);
+                if(budget === 0 || costsOfMonthByMonthName <= budget) {
                     return costsByUserForMonth;
                 }
-                else if(costsOfMonthByMonthName > settingsStore.getBudget) {
+                else if(costsOfMonthByMonthName > budget) {
                     const pendingPercentageOfUser = costsByUserForMonth / costsOfMonthByMonthName;
-                    return (pendingPercentageOfUser * settingsStore.getBudget).toFixed(2);
+                    return (pendingPercentageOfUser * budget).toFixed(2);
                 }           
+            }
+        },
+        getStatsOfUserByMonthAndYear: (state) => {
+            return (userObject, month, year) => {
+                const tripsOfUser = state.getTripsClassifiedByUserForMonthAndYear(month, year).find(tripsOfUser => tripsOfUser.userId === userObject.userId);
+                const pending = state.getPendingAmountOfMoneyByUserForMonth(userObject, month, year);
+                const costs = state.getCostsByUserForMonth(userObject, month, year)
+
+                return {
+                    userName: tripsOfUser ? tripsOfUser.title : '',
+                    userId: tripsOfUser ? tripsOfUser.userId : '',
+                    trips: tripsOfUser ? tripsOfUser.trips : [],
+                    pending: pending,
+                    costs: costs
+                }
             }
         }
     },

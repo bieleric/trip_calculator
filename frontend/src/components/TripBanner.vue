@@ -75,7 +75,9 @@
     let costs = 0;
 
     if(props.data.transport === 'car') {
-        costs = props.data.single_trip === 0 ? (props.data.distance * settingsStore.getPricePerKilometer * 2).toFixed(2) : (props.data.distance * settingsStore.getPricePerKilometer).toFixed(2);
+        const closing = closingsStore.getClosingByMonthAndYear(new Date(props.data.date).getMonth() + 1, Number(new Date(props.data.date).getFullYear()));
+        const pricePerKilometer = isClosed(props.data.date) ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
+        costs = props.data.single_trip === 0 ? (props.data.distance * pricePerKilometer * 2).toFixed(2) : (props.data.distance * pricePerKilometer).toFixed(2);
     }
     else {
         costs = props.data.single_trip === 0  ? (props.data.costs * 2).toFixed(2) : (props.data.costs).toFixed(2);
