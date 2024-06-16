@@ -54,7 +54,7 @@
       <p class="w-11/12 md:w-3/4 mx-auto mb-3">Gesamtkosten: {{ statsOfUserByMonthAndYear.costs }}€</p>
       <p class="w-11/12 md:w-3/4 mx-auto mb-3">Erstattung: {{ statsOfUserByMonthAndYear.pending }}€</p>
       <p class="text-xl w-11/12 md:w-3/4 mx-auto mb-3 mt-20">Fahrten ({{ statsOfUserByMonthAndYear.trips.length }})</p>
-      <div v-for="trip in statsOfUserByMonthAndYear.trips">
+      <div v-for="trip in statsOfUserByMonthAndYear.trips" :key="trip.id">
         <TripBanner :data="trip"></TripBanner>
       </div>
     </div>

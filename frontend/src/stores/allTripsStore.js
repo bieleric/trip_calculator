@@ -115,6 +115,10 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                         classifiedByUser[userName].trips.push(trip);
                     }
                 });
+
+                Object.values(classifiedByUser).forEach(user => {
+                    user.trips.sort((a, b) => new Date(b.date) - new Date(a.date));
+                });
         
                 return Object.values(classifiedByUser);
             };
