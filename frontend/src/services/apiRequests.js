@@ -2,7 +2,6 @@ import axios from "axios";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
-import { useMyTripsStore } from "@/stores/myTripsStore";
 import { useAllTripsStore } from "@/stores/allTripsStore";
 import { useClosingsStore } from "@/stores/closingsStore";
 
@@ -14,7 +13,6 @@ export const fetchAllData = async (isAdmin) => {
         await fetchAdminSettings();
         await fetchAllUsers();
         await fetchFavoritesOfUser();
-        await fetchTripsOfUser();
         await fetchClosings();
         await fetchAllTrips();
     } catch (err) {
@@ -65,22 +63,6 @@ export const fetchFavoritesOfUser = async () => {
     .then(response => {
         const favoritesStore = useFavoritesStore();
         favoritesStore.setupFavoritesStore(response.data.favorites);
-    })
-    .catch(err => {
-        console.error('Fehler beim Abrufen der Daten:', err);
-    });
-};
-
-export const fetchTripsOfUser = async () => {
-    axios.get('http://localhost:3000/api/trips', {
-      headers: {
-        'x-api-key': apiKey,
-        'Authorization': localStorage.getItem('jwt')
-      }
-    })
-    .then(response => {
-        const myTripsStore = useMyTripsStore();
-        myTripsStore.setupMyTripsStore(response.data.myTrips);
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
@@ -178,8 +160,6 @@ export const addTrip = async (transport, start, destination, costs, distance, si
             const favoritesStore = useFavoritesStore();
             favoritesStore.addFavorite(response.data.favorite);
         }
-        const myTripsStore = useMyTripsStore();
-        myTripsStore.addTrip(response.data.trip);
 
         const allTripsStore = useAllTripsStore();
         allTripsStore.addTrip(response.data.trip);
@@ -197,9 +177,6 @@ export const deleteTrip = async (id) => {
         }
     })
     .then(response => {
-        const myTripsStore = useMyTripsStore();
-        myTripsStore.deleteTrip(id);
-
         const allTripsStore = useAllTripsStore();
         allTripsStore.deleteTrip(id);
     })
@@ -216,7 +193,7 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
         costs: costs,
         distance: distance,
         date: date,
-        singleTrip: singleTrip,
+        singleTrip: singleTrip ? 1 : 0,
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -224,8 +201,8 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
         }
     })
     .then(response => {
-        const myTripsStore = useMyTripsStore();
-        myTripsStore.updateTrip({
+        const allTripsStore = useAllTripsStore();
+        allTripsStore.updateTrip({
             id: id,
             transport: transport,
             start: start,
@@ -233,7 +210,7 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
             costs: costs,
             distance: distance,
             date: date,
-            singleTrip: singleTrip,
+            singleTrip: singleTrip ? 1 : 0,
         });
     })
     .catch(err => {

@@ -80,7 +80,7 @@
         costs = props.data.single_trip === 0 ? (props.data.distance * pricePerKilometer * 2).toFixed(2) : (props.data.distance * pricePerKilometer).toFixed(2);
     }
     else {
-        costs = props.data.single_trip === 0  ? (props.data.costs * 2).toFixed(2) : (props.data.costs).toFixed(2);
+        costs = props.data.single_trip === 0  ? (props.data.costs * 2).toFixed(2) : Number(props.data.costs).toFixed(2);
     }
 </script>
 

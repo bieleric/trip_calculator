@@ -1,20 +1,12 @@
 <script setup>
   import { ref, computed } from 'vue';
-  import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-  import { faCircleCheck } from '@fortawesome/free-solid-svg-icons';
   import BaseLayout from '@/layouts/BaseLayout.vue';
-  import Button from '@/components/Button.vue';
-  import ClosingCollapse from '@/components/ClosingCollapse.vue';
   import TripBanner from '@/components/TripBanner.vue';
-  import { useSettingsStore } from '@/stores/settingsStore';
   import { useAllTripsStore } from '@/stores/allTripsStore';
-  import { useMyTripsStore } from '@/stores/myTripsStore';
   import { useClosingsStore } from '@/stores/closingsStore';
   import { getMonthsNames, getUser } from '@/services/helpers';
 
-  const settingsStore = useSettingsStore();
   const allTripsStore = useAllTripsStore();
-  const myTripsStore = useMyTripsStore();
   const closingsStore = useClosingsStore();
 
   const props = defineProps({

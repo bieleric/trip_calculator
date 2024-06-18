@@ -5,7 +5,6 @@
     import { useUserStore } from '@/stores/userStore';
     import { useSettingsStore } from '@/stores/settingsStore';
     import { useFavoritesStore } from '@/stores/favoritesStore';
-    import { useMyTripsStore } from '@/stores/myTripsStore';
     import { useAllTripsStore } from '@/stores/allTripsStore';
     import { useClosingsStore } from '@/stores/closingsStore';
 
@@ -19,7 +18,6 @@
         useUserStore().resetStore();
         useSettingsStore().resetStore();
         useFavoritesStore().resetStore();
-        useMyTripsStore().resetStore();
         useAllTripsStore().resetStore();
         useClosingsStore().resetStore();
         localStorage.removeItem('jwt');

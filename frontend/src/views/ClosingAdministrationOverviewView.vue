@@ -33,7 +33,7 @@
     <div class="closing">
       <p v-if="props.userClosings" class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschluss</p>
       <p v-else class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschlussverwaltung</p>
-      <div v-for="month in allTripsStore.getAllTripsClassified" class="w-11/12 md:w-3/4 mx-auto mb-3 border-b text-lg">
+      <div v-for="month in allTripsStore.getAllTripsClassifiedByMonthAndYear" class="w-11/12 md:w-3/4 mx-auto mb-3 border-b text-lg">
         <RouterLink :to="{
           name: props.userClosings ? 'closing' : 'closingAdministration', 
           query: {

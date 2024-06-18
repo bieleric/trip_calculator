@@ -2,25 +2,25 @@
   import { ref, computed } from 'vue';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import TripBanner from '@/components/TripBanner.vue';
-  import { useMyTripsStore } from '@/stores/myTripsStore';
+  import { useAllTripsStore } from '@/stores/allTripsStore';
 
-  const myTripsStore = useMyTripsStore();
+  const allTripsStore = useAllTripsStore();
   const filter = ref('all');
   const tripCounter = ref(0);
 
   const shownTrips = computed(() => {
     if (filter.value === 'all') {
-      const allTrips = myTripsStore.getAllMyTripsClassified;
-      tripCounter.value = myTripsStore.getAllMyTrips.length;
+      const allTrips = allTripsStore.getTripsClassifiedByMonthAndYearForCurrentUser;
+      tripCounter.value = allTripsStore.getTripsOfCurrentUser.length;
       return allTrips;
     } 
     else if (filter.value === 'currentMonth') {
-      const tripsOfCurrentMonth = myTripsStore.getTripsOfCurrentMonth;
-      tripCounter.value = tripsOfCurrentMonth[0] ? tripsOfCurrentMonth[0].trips.length : 0;
-      return tripsOfCurrentMonth;
-    } 
+      const tripsOfCurrentMonthByCurrentUser = allTripsStore.getTripsOfCurrentMonthByCurrentUser;
+      tripCounter.value = tripsOfCurrentMonthByCurrentUser[0] ? tripsOfCurrentMonthByCurrentUser[0].trips.length : 0;
+      return tripsOfCurrentMonthByCurrentUser;
+    }
     else if (filter.value === 'lastMonth') {
-      const tripsOfLastMonth = myTripsStore.getTripsOfLastMonth;
+      const tripsOfLastMonth = allTripsStore.getTripsOfLastMonthByCurrentUser;
       tripCounter.value = tripsOfLastMonth[0] ? tripsOfLastMonth[0].trips.length : 0;
       return tripsOfLastMonth;
     }
@@ -43,11 +43,12 @@
       </div>
       <div v-for="tripMonth in shownTrips" :key="tripMonth.title">
         <p class="text-xl w-11/12 md:w-3/4 mx-auto mb-3 mt-10">{{ tripMonth.title }}</p>
+        <p v-if="tripMonth.trips.length === 0" class="text-sm text-center">Bisher keine Fahrten hinzugefügt</p>
         <div v-for="trip in tripMonth.trips" :key="trip.id">
           <TripBanner :data="trip" :favoritesBanner="false"></TripBanner>
         </div>
       </div>
-      <p v-if="myTripsStore.getAllMyTrips.length === 0" class="text-sm text-center">Keine Fahrten gefunden</p>
+      <p v-if="allTripsStore.getTripsOfCurrentUser.length === 0" class="text-sm text-center">Keine Fahrten gefunden</p>
     </div>
   </BaseLayout>
 </template>

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useSettingsStore } from './settingsStore';
 import { useClosingsStore } from './closingsStore';
 import { useUserStore } from './userStore';
-import { getMonthAsNumeral } from '@/services/helpers';
+import { getMonthAsNumeral, getMonthsNames, getUser } from '@/services/helpers';
 
 const getDefaultState = () => {
     return {
@@ -15,7 +15,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
     state: () => getDefaultState(),
     getters: {
         getAllTrips: (state) => state.allTrips,
-        getAllTripsClassified: (state) => {
+        getAllTripsClassifiedByMonthAndYear: (state) => {
             const classifiedTrips = {};
 
             state.getAllTrips.forEach((trip) => {
@@ -44,6 +44,99 @@ export const useAllTripsStore = defineStore('allTripsStore', {
 
             return classifiedArray;
         },
+        getAllTripsClassfiedByUser: (state) => {
+            const classifiedTrips = {};
+
+            state.getAllTrips.forEach((trip) => {
+                const userStore = useUserStore();
+                const userOfTrip = userStore.getActiveUsers.find(activeUser => activeUser.id === trip.user_id);
+
+                if(!classifiedTrips[trip.user_id]) {
+                    classifiedTrips[trip.user_id] = { userId: trip.user_id, userName: userOfTrip.name, trips: []}
+                }
+
+                classifiedTrips[trip.user_id].trips.push(trip);
+            });
+
+            let classifiedArray = Object.values(classifiedTrips).map(entry => {
+                entry.trips.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return entry;
+            });
+
+            classifiedArray.sort((a, b) => a.userName.localeCompare(b.userName));
+
+            return classifiedArray;
+        },
+        getTripsOfCurrentUser: (state) => {
+            const currentUser = getUser();
+            const tripsOfCurrentUser = [];
+
+            state.getAllTrips.forEach(trip => {
+                if(trip.user_id === currentUser.userId) {
+                    tripsOfCurrentUser.push(trip);
+                }
+            });
+
+            return tripsOfCurrentUser;
+        },
+        getTripsClassifiedByMonthAndYearForCurrentUser: (state) => {
+            const classifiedTrips = {};
+            const currentUser = getUser();
+
+            state.getAllTrips.forEach((trip) => {
+                const date = new Date(trip.date);
+                const monthYear = `${state.monthNames[date.getMonth()]} ${date.getFullYear()}`;
+
+                if(!classifiedTrips[monthYear]) {
+                    classifiedTrips[monthYear] = { title: monthYear, userId: currentUser.userId, trips: []}
+                }
+
+                if(trip.user_id === currentUser.userId) {
+                    classifiedTrips[monthYear].trips.push(trip);
+                }
+            });
+
+            let classifiedArray = Object.values(classifiedTrips).map(entry => {
+                entry.trips.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return entry;
+            });
+
+            classifiedArray.sort((a, b) => {
+                const [monthA, yearA] = a.title.split(' ');
+                const [monthB, yearB] = b.title.split(' ');
+                const dateA = new Date(`${yearA}-${state.monthNames.indexOf(monthA) + 1}-01`);
+                const dateB = new Date(`${yearB}-${state.monthNames.indexOf(monthB) + 1}-01`);
+                return dateB - dateA;
+            });
+
+            return classifiedArray;
+        },
+        getTripsOfCurrentMonthByCurrentUser: (state) => {
+            const currentUser = getUser();
+            const currentDate = new Date();
+            const tripsByCurrentUser = state.getAllTripsClassfiedByUser.find(tripsByUser => tripsByUser.userId === currentUser.userId);
+            const tripsOfCurrentMonthByCurrentUser = tripsByCurrentUser.trips.filter(tripByCurrentUser => {
+                return new Date(tripByCurrentUser.date).getMonth() === currentDate.getMonth();
+            });
+            return [{
+                userId: currentUser.userId,
+                title: getMonthsNames()[currentDate.getMonth()] + ' ' + currentDate.getFullYear(),
+                trips: tripsOfCurrentMonthByCurrentUser
+            }]
+        },
+        getTripsOfLastMonthByCurrentUser: (state) => {
+            const currentUser = getUser();
+            const currentDate = new Date();
+            const tripsByCurrentUser = state.getAllTripsClassfiedByUser.find(tripsByUser => tripsByUser.userId === currentUser.userId);
+            const tripsOfLastMonthByCurrentUser = tripsByCurrentUser.trips.filter(tripByCurrentUser => {
+                return new Date(tripByCurrentUser.date).getMonth() === new Date().getMonth() - 1;
+            });
+            return [{
+                userId: currentUser.userId,
+                title: getMonthsNames()[currentDate.getMonth() - 1] + ' ' + currentDate.getFullYear(),
+                trips: tripsOfLastMonthByCurrentUser
+            }]
+        },
         getTripsOfCurrentMonth: (state) => {
             return state.getAllMyTripsClassified.filter(tripMonth => {
                 const [month, year] = tripMonth.title.split(' ');
@@ -61,7 +154,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         getCostsOfMonthByMonthName: (state) => {
             return (monthName) => {
                 const settingsStore = useSettingsStore();
-                const tripsOfMonth = state.getAllTripsClassified.find(month => month.title === monthName)
+                const tripsOfMonth = state.getAllTripsClassifiedByMonthAndYear.find(month => month.title === monthName)
                 let costsOfMonth = 0;
                 if(tripsOfMonth) {
                     tripsOfMonth.trips.forEach(trip => {
@@ -74,13 +167,13 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                     });
                 }
 
-                return costsOfMonth.toFixed(2);
+                return Number(costsOfMonth).toFixed(2);
             }
         },
         getTripsOfMonthByMonthName: (state) => {
             return (monthName) => {
                 const userStore = useUserStore();
-                const tripsOfMonth = state.getAllTripsClassified.find(month => month.title === monthName);
+                const tripsOfMonth = state.getAllTripsClassifiedByMonthAndYear.find(month => month.title === monthName);
 
                 // add user name by id
                 if(tripsOfMonth) {
@@ -192,6 +285,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             this.allTrips.push(trip);
         },
         updateTrip(trip) {
+            console.log(trip)
             this.allTrips.find(oldTrip => {
                 if(oldTrip.id === Number(trip.id)) {
                     oldTrip.transport = trip.transport;
@@ -200,7 +294,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                     oldTrip.costs = trip.costs;
                     oldTrip.distance = trip.distance;
                     oldTrip.date = trip.date;
-                    oldTrip.single_trip = trip.singleSingle;
+                    oldTrip.single_trip = trip.singleTrip ? 1 : 0;
                 }
             });
         },

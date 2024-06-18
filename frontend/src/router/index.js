@@ -11,7 +11,6 @@ import ClosingAdministrationOverviewView from '@/views/ClosingAdministrationOver
 import ClosingAdministrationView from '@/views/ClosingAdministrationView.vue';
 import ClosingView from '@/views/ClosingView.vue';
 import { useFavoritesStore } from '@/stores/favoritesStore';
-import { useMyTripsStore } from '@/stores/myTripsStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
 import { useAllTripsStore } from '@/stores/allTripsStore';
@@ -111,7 +110,6 @@ router.beforeEach(async (to, from, next) => {
       useUserStore().resetStore();
       useSettingsStore().resetStore();
       useFavoritesStore().resetStore();
-      useMyTripsStore().resetStore();
       useAllTripsStore().resetStore();
       useClosingsStore().resetStore();
       localStorage.removeItem('jwt');
