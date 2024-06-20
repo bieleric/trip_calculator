@@ -4,7 +4,7 @@
     import router from '@/router';
     import { fetchAllData } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
-import { isAdmin } from '@/services/helpers';
+    import { isAdmin } from '@/services/helpers';
 
     const email = ref('');
     const password = ref('');

@@ -10,7 +10,27 @@ function checkDatabaseAndCreateTables(db) {
                 resolve(true);
             }
         });
+        initializeGroupsTable(db, (success) => {
+            if (!success) {
+                console.error("Fehler beim Initialisieren der Tabelle 'groups'.");
+                reject(false);
+            } 
+            else {
+                console.log("Die Tabelle 'groups' ist einsatzbereit.");
+                resolve(true);
+            }
+        });
         initializeUsersTable(db, (success) => {
+            if (!success) {
+                console.error("Fehler beim Initialisieren der Tabelle 'users'.");
+                reject(false);
+            } 
+            else {
+                console.log("Die Tabelle 'users' ist einsatzbereit.");
+                resolve(true);
+            }
+        });
+        initializeUserGroupsTable(db, (success) => {
             if (!success) {
                 console.error("Fehler beim Initialisieren der Tabelle 'users'.");
                 reject(false);
@@ -79,7 +99,7 @@ function initializeRolesTable(db, callback) {
                 } 
                 else {
                     console.log("Tabelle 'roles' erfolgreich erstellt.");
-                    db.run("INSERT INTO roles (role_id, role_name) VALUES (1, 'admin'), (2, 'user')", function(err) {
+                    db.run("INSERT INTO roles (role_id, role_name) VALUES (0, 'superuser'), (1, 'admin'), (2, 'user')", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'roles': ", err.message);
                             callback(false);
@@ -93,6 +113,40 @@ function initializeRolesTable(db, callback) {
         } 
         else {
             console.log("Die Tabelle 'roles' bereits erstellt.");
+            callback(true);
+        }
+    });
+}
+
+function initializeGroupsTable(db, callback) {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='groups'", function(err, row) {
+        if (err) {
+            console.error("Fehler beim Abfragen der Tabelle 'users': ", err.message);
+            callback(false);
+            return;
+        }
+
+        if (!row) {
+            db.run("CREATE TABLE groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)", function(err) {
+                if (err) {
+                    console.error("Fehler beim Erstellen der Tabelle 'groups': ", err.message);
+                    callback(false);
+                } 
+                else {
+                    db.run("INSERT INTO groups (name) VALUES ('demo')", function(err) {
+                        if (err) {
+                            console.error("Fehler beim Initialisieren der Tabelle 'groups': ", err.message);
+                            callback(false);
+                        } else {
+                            console.log("Tabelle 'groups' erfolgreich initialisiert.");
+                            callback(true);
+                        }
+                    });
+                }
+            });
+        } 
+        else {
+            console.log("Die Tabelle 'groups' bereits erstellt.");
             callback(true);
         }
     });
@@ -113,7 +167,7 @@ function initializeUsersTable(db, callback) {
                     callback(false);
                 } 
                 else {
-                    db.run("INSERT INTO users (name, email, password, role_id, active) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 1, 1)", function(err) {
+                    db.run("INSERT INTO users (name, email, password, role_id, active) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 0, 1)", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'users': ", err.message);
                             callback(false);
@@ -132,6 +186,40 @@ function initializeUsersTable(db, callback) {
     });
 }
 
+function initializeUserGroupsTable(db, callback) {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='usergroups'", function(err, row) {
+        if (err) {
+            console.error("Fehler beim Abfragen der Tabelle 'usergroups': ", err.message);
+            callback(false);
+            return;
+        }
+
+        if (!row) {
+            db.run("CREATE TABLE usergroups (user_id INTEGER, group_id INTEGER, role_id INTEGER, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (group_id) REFERENCES groups(id), FOREIGN KEY (role_id) REFERENCES roles(role_id), PRIMARY KEY (user_id, group_id))", function(err) {
+                if (err) {
+                    console.error("Fehler beim Erstellen der Tabelle 'usergroups': ", err.message);
+                    callback(false);
+                } 
+                else {
+                    db.run("INSERT INTO usergroups (user_id, group_id, role_id) VALUES((SELECT id FROM users WHERE email = 'admin@email.com'), (SELECT id FROM groups WHERE name = 'demo'), (SELECT role_id FROM roles WHERE role_id = 0))", function(err) {
+                        if (err) {
+                            console.error("Fehler beim Initialisieren der Tabelle 'usergroups': ", err.message);
+                            callback(false);
+                        } else {
+                            console.log("Tabelle 'usergroups' erfolgreich initialisiert.");
+                            callback(true);
+                        }
+                    });
+                }
+            });
+        } 
+        else {
+            console.log("Die Tabelle 'usergroups' bereits erstellt.");
+            callback(true);
+        }
+    });
+}
+
 function initializeTripsTable(db, callback) {
     db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trips'", function(err, row) {
         if (err) {
@@ -141,7 +229,7 @@ function initializeTripsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id))", function(err) {
+            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, group_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (group_id) REFERENCES groups(id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'trips': ", err.message);
                     callback(false);
@@ -168,7 +256,7 @@ function initializeFavoritesTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL,  transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id))", function(err) {
+            db.run("CREATE TABLE favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL,  transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, group_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (group_id) REFERENCES groups(id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'favorites': ", err.message);
                     callback(false);
@@ -195,13 +283,13 @@ function initializeAdminSettingsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, primary_color TEXT NOT NULL, secondary_color TEXT NOT NULL, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL)", function(err) {
+            db.run("CREATE TABLE admin_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL, group_id INTEGER, FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'admin_settings': ", err.message);
                     callback(false);
                 } 
                 else {
-                    db.run("INSERT INTO admin_settings (primary_color, secondary_color, budget, price_per_kilometer) VALUES ('#FF8200', '#FFFFFF', 500, 0.3)", function(err) {
+                    db.run("INSERT INTO admin_settings (budget, price_per_kilometer, group_id) VALUES (500, 0.3, 1)", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'admin_settings': ", err.message);
                             callback(false);
@@ -229,7 +317,7 @@ function initializeClosingsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE closings (id INTEGER PRIMARY KEY AUTOINCREMENT, period TIMESTAMP NOT NULL UNIQUE, closed INTEGER NOT NULL, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)", function(err) {
+            db.run("CREATE TABLE closings (id INTEGER PRIMARY KEY AUTOINCREMENT, period TIMESTAMP NOT NULL UNIQUE, closed INTEGER NOT NULL, budget REAL NOT NULL, price_per_kilometer REAL NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, group_id INTEGER, FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'closings': ", err.message);
                     callback(false);

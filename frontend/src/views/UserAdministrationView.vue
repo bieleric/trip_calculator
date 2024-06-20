@@ -2,6 +2,7 @@
   import { ref } from 'vue';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import { deleteUser, inviteUser } from '@/services/apiRequests';
+  import { getUser, isSuperUser } from '@/services/helpers';
   import { useUserStore } from '@/stores/userStore';
   import ConfirmDeletionModal from '@/components/ConfirmDeletionModal.vue';
   import Button from '@/components/Button.vue';
@@ -22,16 +23,17 @@
   const openDeleteModal = (user) => {
     isDeleteModalOpen.value = true;
     userToDelete.value = user;
-    deletionText.value = 'Sind Sie sicher, dass Sie ' + userToDelete.value.name + ' entfernen wollen? Es werden dabei alle Fahrten des Nutzers gelöscht.';
+    deletionText.value = 'Sind Sie sicher, dass Sie ' + userToDelete.value.name + ' entfernen wollen?';
   }
 
-  const deleteUserByEmail = (email) => {
-    deleteUser(email);
+  const deleteUserByEmail = (userId) => {
+    deleteUser(userId);
     isDeleteModalOpen.value = false;
   }
 
   const inviteUserToJoin = () => {
-    inviteUser(email, name, selectedRole)
+    const currentUser = getUser();
+    inviteUser(email, name, selectedRole, currentUser.groupId)
     .then(response => {
         message.value = "Einladung wurde versendet.";
         error.value = false;
@@ -80,7 +82,8 @@
             <p class="col-span-2">{{ user.role_name }}</p>
         </div>
         <div class="border-t border-zinc-600 mt-4"></div>
-        <p @click="openDeleteModal(user)" class="text-red-500 text-center mt-3 cursor-pointer">Entfernen</p>
+        <p v-if="user.role_id !== 0" @click="openDeleteModal(user)" class="text-red-500 text-center mt-3 cursor-pointer">Entfernen</p>
+        <p v-else class="text-zinc-400 text-center mt-3">Dieser Nutzer kann nicht entfernt werden</p>
       </div>
       <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3 mt-12">Eingeladen</p>
       <p v-if="userStore.getInactiveUsers.length === 0" class="text-sm text-center">Keine ausstehenden Einladung</p>
@@ -104,7 +107,7 @@
       title='Nutzer entfernen'
       :text="deletionText"
       @close="isDeleteModalOpen = false"
-      @confirm="deleteUserByEmail(userToDelete.email)"
+      @confirm="deleteUserByEmail(userToDelete.id)"
     />
   </BaseLayout>
 </template>

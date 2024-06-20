@@ -7,7 +7,7 @@
 
 <template>
     <main class="relative h-dvh text-slate-300 overflow-x-hidden">
-        <div class="background" :style="'background: linear-gradient(to bottom right,' + settingsStore.getPrimaryColorInRGBA + ', ' + settingsStore.getSecondaryColorInRGBA + ')'"></div>
+        <div class="background" :style="'background: linear-gradient(to bottom right, rgba(255, 130, 0, 0.6), rgba(255, 255, 255, 0.6))'"></div>
         <div class="content">
             <Sidebar />
             <slot></slot>

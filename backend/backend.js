@@ -15,8 +15,19 @@ const port = process.env.PORT || 3000;
 const apiKey = process.env.API_KEY;
 const jwtKey = process.env.JWT_KEY;
 
-// setup database if required
-const db = new sqlite3.Database('../trip_calculator.db');
+const db = new sqlite3.Database('../trip_calculator.db', (err) => {
+  if (err) {
+    console.error('Database connection error:', err.message);
+  } else {
+    // Enable foreign key support
+    db.run('PRAGMA foreign_keys = ON;', (err) => {
+      if (err) {
+        console.error('Failed to enable foreign keys:', err.message);
+      }
+    });
+  }
+});
+
 checkDatabaseAndCreateTables(db);
 
 // middleware for api validation
@@ -49,7 +60,7 @@ const authorizeAdmin = (req, res, next) => {
   const token = req.headers['authorization'];
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    if(decoded.role_id !== 1) {
+    if(decoded.role_id !== 1 && decoded.role_id !== 0) {
       return res.status(403).json({ error: 'Access denied' });
     }
     next();
@@ -74,19 +85,33 @@ app.post('/signIn', (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ 
-      userId: user.id,
-      email: user.email,
-      role_id: user.role_id
-    }, jwtKey, { expiresIn: '1h' });
+    db.all("SELECT g.id AS group_id, g.name AS group_name FROM usergroups ug JOIN groups g ON ug.group_id = g.id WHERE user_id = ?", [user.id],  (err, groups) => {
+      if (err) {
+        return res.status(400).json({ "error": err.message });
+      }
 
-    res.status(200).json({ token, user, message: 'Success' });
+      const token = jwt.sign({
+        userId: user.id,
+        email: user.email,
+        role_id: user.role_id,
+        group_id: groups[0].group_id,
+      }, jwtKey, { expiresIn: '1h' });
+
+      res.status(200).json({ token, user, message: 'Success' });
+    });
   });
 });
 
 // User Endpoints
 app.get('/api/users', validateApiKey, validateToken, (req, res) => {
-  db.all("SELECT * FROM users", [], (err, rows) => {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.all("SELECT u.id, u.name, u.email, u.role_id, u.active FROM users u JOIN usergroups ug ON u.id = ug.user_id WHERE ug.group_id = ?", [groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -97,18 +122,46 @@ app.get('/api/users', validateApiKey, validateToken, (req, res) => {
 
 app.post('/api/users', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
   const { email, name, role } = req.body;
+
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+  
   db.run("INSERT INTO users (email, name, password, role_id, active) VALUES (?, ?, ?, ?, ?)", [email, name, '', role, 0], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    return res.status(200).json({ message: 'success' });
+    db.get("SELECT * FROM users WHERE email = ? ORDER BY id DESC LIMIT 1", [email], (err, userRow) => {
+      if(err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      db.run("INSERT INTO usergroups (user_id, group_id, role_id) VALUES (?, ?, ?)", [userRow.id, groupId, role], (err, rows) => {
+        if (err) {
+          return res.status(400).json({ error: err.message });
+        }
+    
+        return res.status(200).json({ message: 'success' });
+      });
+    });
   });
 });
 
-app.delete('/api/users/:email', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const userEmail = req.params.email;
-  db.run("DELETE FROM users WHERE email = ?", [userEmail], function(err) {
+app.delete('/api/users/:userId', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const userId = req.params.userId;
+
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.run("DELETE FROM users WHERE id = ? AND group_id = ?", [userId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -124,18 +177,18 @@ app.delete('/api/users/:email', validateApiKey, validateToken, authorizeAdmin, (
 // Trips Endpoints
 app.get('/api/trips', validateApiKey, validateToken, (req, res) => {
   const token = req.headers['authorization'];
-  let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    groupId = decoded.group_id
   });
 
-  db.all("SELECT * FROM trips WHERE user_id = ?", [userId], (err, rows) => {
+  db.all("SELECT * FROM trips WHERE group_id = ?", [groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    return res.status(200).json({ message: 'success', myTrips: rows });
+    return res.status(200).json({ message: 'success', allTrips: rows });
   });
 });
 
@@ -143,13 +196,15 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
   const { transport, start, destination, costs, distance, singleTrip, date, favorites } = req.body;
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
     userId = decoded.userId
+    groupId = decoded.group_id
   });
 
   if(favorites) {
-    db.run("INSERT INTO favorites (user_id, start, destination, transport, costs, distance, single_trip) VALUES (?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, transport, costs, distance, singleTrip], (err, rows) => {
+    db.run("INSERT INTO favorites (user_id, start, destination, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, transport, costs, distance, singleTrip, groupId], (err, rows) => {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
@@ -159,7 +214,7 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
           return res.status(400).json({ error: err.message });
         }
         
-        db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip], (err, rows) => {
+        db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId], (err, rows) => {
           if (err) {
             return res.status(400).json({ error: err.message });
           }
@@ -176,7 +231,7 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
     });
   }
   else {
-    db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip], (err, rows) => {
+    db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId], (err, rows) => {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
@@ -196,12 +251,14 @@ app.delete('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
   const tripId = req.params.id;
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    userId = decoded.userId,
+    groupId = decoded.group_id
   });
 
-  db.run("DELETE FROM trips WHERE user_id = ? AND id = ?", [userId, tripId], function(err) {
+  db.run("DELETE FROM trips WHERE user_id = ? AND id = ? AND group_id = ?", [userId, tripId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -220,12 +277,14 @@ app.post('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
 
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    userId = decoded.userId,
+    groupId = decoded.group_id
   });
 
-  db.run("UPDATE trips SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, date = ?, single_trip = ? WHERE user_id = ? AND id = ?", [start, destination, transport, costs, distance, date, singleTrip, userId, tripId], function(err) {
+  db.run("UPDATE trips SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, date = ?, single_trip = ? WHERE user_id = ? AND id = ? AND group_id = ?", [start, destination, transport, costs, distance, date, singleTrip, userId, tripId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -238,26 +297,18 @@ app.post('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
   });
 });
 
-app.get('/api/allTrips', validateApiKey, validateToken, (req, res) => {
-  db.all("SELECT * FROM trips", (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    return res.status(200).json({ message: 'success', allTrips: rows });
-  });
-});
-
 // Favorites Endpoints
 app.get('/api/favorites', validateApiKey, validateToken, (req, res) => {
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    userId = decoded.userId,
+    groupId = decoded.group_id
   });
 
-  db.all("SELECT * FROM favorites WHERE user_id LIKE ?", [userId], (err, rows) => {
+  db.all("SELECT * FROM favorites WHERE user_id = ? AND group_id = ?", [userId, groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -270,12 +321,14 @@ app.delete('/api/favorites/:id', validateApiKey, validateToken, (req, res) => {
   const favoriteId = req.params.id;
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    userId = decoded.userId,
+    groupId = decoded.group_id
   });
 
-  db.run("DELETE FROM favorites WHERE user_id = ? AND id = ?", [userId, favoriteId], function(err) {
+  db.run("DELETE FROM favorites WHERE user_id = ? AND id = ? AND group_id = ?", [userId, favoriteId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -294,12 +347,14 @@ app.post('/api/favorites/:id', validateApiKey, validateToken, (req, res) => {
 
   const token = req.headers['authorization'];
   let userId = '';
+  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId
+    userId = decoded.userId,
+    groupId = decoded.group_id
   });
 
-  db.run("UPDATE favorites SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, single_trip = ? WHERE user_id = ? AND id = ?", [start, destination, transport, costs, distance, singleTrip, userId, favoriteId], function(err) {
+  db.run("UPDATE favorites SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, single_trip = ? WHERE user_id = ? AND id = ? AND group_id = ?", [start, destination, transport, costs, distance, singleTrip, userId, favoriteId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -314,7 +369,14 @@ app.post('/api/favorites/:id', validateApiKey, validateToken, (req, res) => {
 
 // Admin Settings Endpoints
 app.get('/api/adminSettings', validateApiKey, validateToken, (req, res) => {
-  db.all("SELECT * FROM admin_settings", [], (err, rows) => {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.all("SELECT * FROM admin_settings WHERE group_id = ?", [groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ "error": err.message });
     }
@@ -326,7 +388,14 @@ app.get('/api/adminSettings', validateApiKey, validateToken, (req, res) => {
 app.post('/api/adminSettings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
   const { budget, pricePerKilometer } = req.body;
 
-  db.run("UPDATE admin_settings SET budget = ?, price_per_kilometer = ?", [budget, pricePerKilometer], function(err) {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.run("UPDATE admin_settings SET budget = ?, price_per_kilometer = ? WHERE group_id = ?", [budget, pricePerKilometer, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -341,7 +410,14 @@ app.post('/api/adminSettings', validateApiKey, validateToken, authorizeAdmin, (r
 
 // Closings Endpoints
 app.get('/api/closings', validateApiKey, validateToken, (req, res) => {
-  db.all("SELECT * FROM closings", (err, rows) => {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.all("SELECT * FROM closings WHERE group_id = ?", [groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -353,7 +429,14 @@ app.get('/api/closings', validateApiKey, validateToken, (req, res) => {
 app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
   const { period, closed, budget, pricePerKilometer } = req.body;
 
-  db.run("INSERT INTO closings (period, closed, budget, price_per_kilometer) VALUES (?, ?, ?, ?)", [period, closed, budget, pricePerKilometer], (err, rows) => {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.run("INSERT INTO closings (period, closed, budget, price_per_kilometer, group_id) VALUES (?, ?, ?, ?, ?)", [period, closed, budget, pricePerKilometer, groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -371,7 +454,14 @@ app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, r
 app.delete('/api/closings/:id', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
   const closingId = req.params.id;
 
-  db.run("DELETE FROM closings WHERE id = ?", [closingId], function(err) {
+  const token = req.headers['authorization'];
+  let groupId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groupId = decoded.group_id
+  });
+
+  db.run("DELETE FROM closings WHERE id = ? AND group_id = ?", [closingId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -383,35 +473,6 @@ app.delete('/api/closings/:id', validateApiKey, validateToken, authorizeAdmin, (
     return res.status(200).json({ message: 'Success' });
   });
 });
-
-
-// TODO: adopt jwt verification
-app.get('/api/roles', validateApiKey, (req, res) => {
-  db.all("SELECT * FROM roles", [], (err, rows) => {
-    if (err) {
-      res.status(400).json({ "error": err.message });
-      return;
-    }
-    res.json({
-      "message": "success",
-      "data": rows
-    });
-  });
-});
-
-app.get('/api/trips', validateApiKey, (req, res) => {
-  db.all("SELECT * FROM trips", [], (err, rows) => {
-    if (err) {
-      res.status(400).json({ "error": err.message });
-      return;
-    }
-    res.json({
-      "message": "success",
-      "data": rows
-    });
-  });
-});
-
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 

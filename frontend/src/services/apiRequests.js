@@ -4,11 +4,12 @@ import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useAllTripsStore } from "@/stores/allTripsStore";
 import { useClosingsStore } from "@/stores/closingsStore";
+import { getUser } from "./helpers";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 
 // fetch data
-export const fetchAllData = async (isAdmin) => {
+export const fetchAllData = async () => {
     try {
         await fetchAdminSettings();
         await fetchAllUsers();
@@ -22,7 +23,7 @@ export const fetchAllData = async (isAdmin) => {
 }
 
 export const fetchAdminSettings = async () => {
-    axios.get('http://localhost:3000/api/adminSettings', {
+    axios.get(`http://localhost:3000/api/adminSettings`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -38,7 +39,7 @@ export const fetchAdminSettings = async () => {
 };
 
 export const fetchAllUsers = async () => {
-    axios.get('http://localhost:3000/api/users', {
+    axios.get(`http://localhost:3000/api/users`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -70,7 +71,7 @@ export const fetchFavoritesOfUser = async () => {
 };
 
 export const fetchAllTrips = async () => {
-    axios.get('http://localhost:3000/api/allTrips', {
+    axios.get('http://localhost:3000/api/trips', {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -102,8 +103,8 @@ export const fetchClosings = async () => {
 };
 
 // User Endpoints
-export const deleteUser = async (email) => {
-    axios.delete(`http://localhost:3000/api/users/${email}`, {
+export const deleteUser = async (userId) => {
+    axios.delete(`http://localhost:3000/api/users/${userId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -111,18 +112,19 @@ export const deleteUser = async (email) => {
     })
     .then(response => {
         const userStore = useUserStore();
-        userStore.deleteUser(email);
+        userStore.deleteUser(userId);
     })
     .catch(err => {
         console.error('Fehler beim Löschen des Nutzers:', err)
     });
 };
 
-export const inviteUser = async (email, name, role) => {
+export const inviteUser = async (email, name, role, group) => {
     axios.post(`http://localhost:3000/api/users`, {
         email: email.value,
         name: name.value,
-        role: role.value
+        role: role.value,
+        group: group
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -285,7 +287,7 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
         });
     })
     .catch(err => {
-        console.error('Fehler beim Update des Favoriten:', err)
+        console.error('Fehler beim Update des Finanzeinstellungen:', err)
     });
 };
 

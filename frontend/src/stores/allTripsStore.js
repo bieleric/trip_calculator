@@ -179,7 +179,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                 if(tripsOfMonth) {
                     tripsOfMonth.trips.forEach(trip => {
                         const userOfTrip = userStore.getActiveUsers.find(activeUser => activeUser.id === trip.user_id);
-                        trip.userName = userOfTrip.name;
+                        trip.userName = userOfTrip ? userOfTrip.name : 'Unknown User';
                     });
                 }
                 return tripsOfMonth ? tripsOfMonth.trips : [];
@@ -200,9 +200,10 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                     if (tripMonth === monthIndex && tripYear === year) {
                         const user = userStore.getActiveUsers.find(user => user.id === trip.user_id);
                         const userName = user ? user.name : 'Unknown User';
+                        const userId = user ? user.id : 'Unknown User ID';
 
                         if (!classifiedByUser[userName]) {
-                            classifiedByUser[userName] = { title: userName, userId: user.id, trips: [] };
+                            classifiedByUser[userName] = { title: userName, userId: userId, trips: [] };
                         }
                         
                         classifiedByUser[userName].trips.push(trip);
@@ -285,7 +286,6 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             this.allTrips.push(trip);
         },
         updateTrip(trip) {
-            console.log(trip)
             this.allTrips.find(oldTrip => {
                 if(oldTrip.id === Number(trip.id)) {
                     oldTrip.transport = trip.transport;

@@ -12,10 +12,19 @@ export const isTokenExpired = () => {
 export const isAdmin = () => {
     try {
       const decodedJWT = jwtDecode(localStorage.getItem('jwt'));
-      return decodedJWT.role_id === 1;
+      return decodedJWT.role_id === 1 || decodedJWT.role_id === 0;
     } catch (err) {
       return false;
     }
+}
+
+export const isSuperUser = () => {
+  try {
+    const decodedJWT = jwtDecode(localStorage.getItem('jwt'));
+    return decodedJWT.role_id === 0;
+  } catch (err) {
+    return false;
+  }
 }
 
 export const getUser = () => {
@@ -24,7 +33,8 @@ export const getUser = () => {
     return {
       email: decodedJWT.email,
       userId: decodedJWT.userId,
-      roleId: decodedJWT.role_id
+      roleId: decodedJWT.role_id,
+      groupId: decodedJWT.group_id
     }
   } catch (err) {
     return false;

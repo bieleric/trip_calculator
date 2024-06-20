@@ -32,9 +32,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
-            <div class="w-10 grid content-center mx-auto">
-                <RouterLink to="/"><img src="/logo_no_text.png" alt="Logo"></RouterLink>
-            </div>
+        <div class="w-10 grid content-center mx-auto">
+            <RouterLink to="/"><img src="/logo_no_text.png" alt="Logo"></RouterLink>
+        </div>
     </div>
 
     <div class="sidebar relative">
