@@ -18,6 +18,7 @@ export const useSettingsStore = defineStore('settingsStore', {
     actions: {
         setupSettingsStore(data) {
             this.budget = data.budget;
+            this.unlimitedBudget = Number(data.budget) === 0;
             this.pricePerKilometer = data.price_per_kilometer;
         },
         updateSettings(data) {

@@ -36,9 +36,6 @@
     set(value) {
       if (value !== settingsStore.getUnlimitedBudget) {
         settingsStore.setUnlimitedBudget(value);
-        if (value) {
-          settingsStore.setBudget(0);
-        }
       }
     }
   });
@@ -53,7 +50,8 @@
   });
 
   const submitUpdateFinanceSettings = () => {
-    updateFinanceSettings(budget.value, pricePerKilometer.value)
+    const conditionalBudget = settingsStore.getUnlimitedBudget ? 0 : budget.value;
+    updateFinanceSettings(conditionalBudget, pricePerKilometer.value)
     .then(response => {
           message.value = "Änderungen wurden übernommen.";
           error.value = false;
