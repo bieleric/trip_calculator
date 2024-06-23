@@ -11,10 +11,11 @@
     const errorMessage = ref('');
 
     const apiKey = import.meta.env.VITE_API_KEY;
+    const backendHost = import.meta.env.VITE_BACKEND;
 
     const signInUser = async () => {
         try {
-            const response = await axios.post('http://localhost:3000/signIn', {
+            const response = await axios.post(`${backendHost}/signIn`, {
                 email: email.value,
                 password: password.value
             }, {

@@ -7,6 +7,7 @@ import { useClosingsStore } from "@/stores/closingsStore";
 import { getUser } from "./helpers";
 
 const apiKey = import.meta.env.VITE_API_KEY;
+const backendHost = import.meta.env.VITE_BACKEND;
 
 // fetch data
 export const fetchAllData = async () => {
@@ -23,7 +24,7 @@ export const fetchAllData = async () => {
 }
 
 export const fetchAdminSettings = async () => {
-    axios.get(`http://localhost:3000/api/adminSettings`, {
+    axios.get(`${backendHost}/api/adminSettings`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -39,7 +40,7 @@ export const fetchAdminSettings = async () => {
 };
 
 export const fetchAllUsers = async () => {
-    axios.get(`http://localhost:3000/api/users`, {
+    axios.get(`${backendHost}/api/users`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -55,7 +56,7 @@ export const fetchAllUsers = async () => {
 };
 
 export const fetchFavoritesOfUser = async () => {
-    axios.get('http://localhost:3000/api/favorites', {
+    axios.get(`${backendHost}/api/favorites`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -71,7 +72,7 @@ export const fetchFavoritesOfUser = async () => {
 };
 
 export const fetchAllTrips = async () => {
-    axios.get('http://localhost:3000/api/trips', {
+    axios.get(`${backendHost}/api/trips`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -87,7 +88,7 @@ export const fetchAllTrips = async () => {
 };
 
 export const fetchClosings = async () => {
-    axios.get('http://localhost:3000/api/closings', {
+    axios.get(`${backendHost}/api/closings`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -104,7 +105,7 @@ export const fetchClosings = async () => {
 
 // User Endpoints
 export const deleteUser = async (userId) => {
-    axios.delete(`http://localhost:3000/api/users/${userId}`, {
+    axios.delete(`${backendHost}/api/users/${userId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -120,7 +121,7 @@ export const deleteUser = async (userId) => {
 };
 
 export const inviteUser = async (email, name, role, group) => {
-    axios.post(`http://localhost:3000/api/users`, {
+    axios.post(`${backendHost}/api/users`, {
         email: email.value,
         name: name.value,
         role: role.value,
@@ -142,7 +143,7 @@ export const inviteUser = async (email, name, role, group) => {
 
 // Trip Endpoints
 export const addTrip = async (transport, start, destination, costs, distance, singleTrip, date, favorites) => {
-    axios.post(`http://localhost:3000/api/trips`, {
+    axios.post(`${backendHost}/api/trips`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -172,7 +173,7 @@ export const addTrip = async (transport, start, destination, costs, distance, si
 };
 
 export const deleteTrip = async (id) => {
-    axios.delete(`http://localhost:3000/api/trips/${id}`, {
+    axios.delete(`${backendHost}/api/trips/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -188,7 +189,7 @@ export const deleteTrip = async (id) => {
 };
 
 export const updateTrip = async (id, transport, start, destination, costs, distance, singleTrip, date) => {
-    axios.post(`http://localhost:3000/api/trips/${id}`, {
+    axios.post(`${backendHost}/api/trips/${id}`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -222,7 +223,7 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
 
 // Favorites Endpoints
 export const deleteFavorite = async (id) => {
-    axios.delete(`http://localhost:3000/api/favorites/${id}`, {
+    axios.delete(`${backendHost}/api/favorites/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -238,7 +239,7 @@ export const deleteFavorite = async (id) => {
 };
 
 export const updateFavorite = async (id, transport, start, destination, costs, distance, singleTrip) => {
-    axios.post(`http://localhost:3000/api/favorites/${id}`, {
+    axios.post(`${backendHost}/api/favorites/${id}`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -270,7 +271,7 @@ export const updateFavorite = async (id, transport, start, destination, costs, d
 
 // Admin Settings Endpoints
 export const updateFinanceSettings = async (budget, pricePerKilometer) => {
-    axios.post(`http://localhost:3000/api/adminSettings`, {
+    axios.post(`${backendHost}/api/adminSettings`, {
         budget: budget,
         pricePerKilometer: pricePerKilometer,
     }, {
@@ -293,7 +294,7 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
 
 // Closings Endpoints
 export const addClosing = async (period, budget, pricePerKilometer) => {
-    axios.post(`http://localhost:3000/api/closings`, {
+    axios.post(`${backendHost}/api/closings`, {
         period: period,
         closed: 1,
         budget: budget,
@@ -314,7 +315,7 @@ export const addClosing = async (period, budget, pricePerKilometer) => {
 };
 
 export const deleteClosing = async (id) => {
-    axios.delete(`http://localhost:3000/api/closings/${id}`, {
+    axios.delete(`${backendHost}/api/closings/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
