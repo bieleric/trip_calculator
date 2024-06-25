@@ -85,20 +85,15 @@ app.post('/signIn', (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    db.all("SELECT g.id AS group_id, g.name AS group_name FROM usergroups ug JOIN groups g ON ug.group_id = g.id WHERE user_id = ?", [user.id],  (err, groups) => {
-      if (err) {
-        return res.status(400).json({ "error": err.message });
-      }
+    const token = jwt.sign({
+      userId: user.id,
+      email: user.email,
+      userName: user.name,
+      role_id: user.role_id,
+      group_id: user.group_id,
+    }, jwtKey, { expiresIn: '1h' });
 
-      const token = jwt.sign({
-        userId: user.id,
-        email: user.email,
-        role_id: user.role_id,
-        group_id: groups[0].group_id,
-      }, jwtKey, { expiresIn: '1h' });
-
-      res.status(200).json({ token, user, message: 'Success' });
-    });
+    res.status(200).json({ token, user, message: 'Success' });
   });
 });
 
@@ -111,7 +106,7 @@ app.get('/api/users', validateApiKey, validateToken, (req, res) => {
     groupId = decoded.group_id
   });
 
-  db.all("SELECT u.id, u.name, u.email, u.role_id, u.active FROM users u JOIN usergroups ug ON u.id = ug.user_id WHERE ug.group_id = ?", [groupId], (err, rows) => {
+  db.all("SELECT * FROM users WHERE group_id = ?", [groupId], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -130,24 +125,12 @@ app.post('/api/users', validateApiKey, validateToken, authorizeAdmin, (req, res)
     groupId = decoded.group_id
   });
   
-  db.run("INSERT INTO users (email, name, password, role_id, active) VALUES (?, ?, ?, ?, ?)", [email, name, '', role, 0], (err, rows) => {
+  db.run("INSERT INTO users (email, name, password, role_id, group_id, active) VALUES (?, ?, ?, ?, ?, ?)", [email, name, '', role, groupId, 0], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    db.get("SELECT * FROM users WHERE email = ? ORDER BY id DESC LIMIT 1", [email], (err, userRow) => {
-      if(err) {
-        return res.status(400).json({ error: err.message });
-      }
-
-      db.run("INSERT INTO usergroups (user_id, group_id, role_id) VALUES (?, ?, ?)", [userRow.id, groupId, role], (err, rows) => {
-        if (err) {
-          return res.status(400).json({ error: err.message });
-        }
-    
-        return res.status(200).json({ message: 'success' });
-      });
-    });
+    return res.status(200).json({ message: 'success' });
   });
 });
 
@@ -197,9 +180,11 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
   const token = req.headers['authorization'];
   let userId = '';
   let groupId = '';
+  let userName = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
     userId = decoded.userId
+    userName = decoded.userName
     groupId = decoded.group_id
   });
 
@@ -214,7 +199,7 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
           return res.status(400).json({ error: err.message });
         }
         
-        db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId], (err, rows) => {
+        db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err, rows) => {
           if (err) {
             return res.status(400).json({ error: err.message });
           }
@@ -231,7 +216,7 @@ app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
     });
   }
   else {
-    db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId], (err, rows) => {
+    db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err, rows) => {
       if (err) {
         return res.status(400).json({ error: err.message });
       }

@@ -198,15 +198,11 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                     const tripYear = tripDate.getFullYear();
 
                     if (tripMonth === monthIndex && tripYear === year) {
-                        const user = userStore.getActiveUsers.find(user => user.id === trip.user_id);
-                        const userName = user ? user.name : 'Unknown User';
-                        const userId = user ? user.id : 'Unknown User ID';
-
-                        if (!classifiedByUser[userName]) {
-                            classifiedByUser[userName] = { title: userName, userId: userId, trips: [] };
+                        if (!classifiedByUser[trip.user_name]) {
+                            classifiedByUser[trip.user_name] = { title: trip.user_name, userId: trip.user_id, trips: [] };
                         }
                         
-                        classifiedByUser[userName].trips.push(trip);
+                        classifiedByUser[trip.user_name].trips.push(trip);
                     }
                 });
 

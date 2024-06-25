@@ -1,15 +1,5 @@
 function checkDatabaseAndCreateTables(db) {
     return new Promise((resolve, reject) => {
-        initializeRolesTable(db, (success) => {
-            if (!success) {
-                console.error("Fehler beim Initialisieren der Tabelle 'roles'.");
-                reject(false);
-            } 
-            else {
-                console.log("Die Tabelle 'roles' ist einsatzbereit.");
-                resolve(true);
-            }
-        });
         initializeGroupsTable(db, (success) => {
             if (!success) {
                 console.error("Fehler beim Initialisieren der Tabelle 'groups'.");
@@ -20,17 +10,17 @@ function checkDatabaseAndCreateTables(db) {
                 resolve(true);
             }
         });
-        initializeUsersTable(db, (success) => {
+        initializeRolesTable(db, (success) => {
             if (!success) {
-                console.error("Fehler beim Initialisieren der Tabelle 'users'.");
+                console.error("Fehler beim Initialisieren der Tabelle 'roles'.");
                 reject(false);
             } 
             else {
-                console.log("Die Tabelle 'users' ist einsatzbereit.");
+                console.log("Die Tabelle 'roles' ist einsatzbereit.");
                 resolve(true);
             }
         });
-        initializeUserGroupsTable(db, (success) => {
+        initializeUsersTable(db, (success) => {
             if (!success) {
                 console.error("Fehler beim Initialisieren der Tabelle 'users'.");
                 reject(false);
@@ -161,13 +151,13 @@ function initializeUsersTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, role_id INTEGER, active INTEGER NOT NULL, FOREIGN KEY (role_id) REFERENCES roles(role_id))", function(err) {
+            db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, role_id INTEGER, group_id INTEGER, active INTEGER NOT NULL, FOREIGN KEY (role_id) REFERENCES roles(role_id), FOREIGN KEY (group_id) REFERENCES groups(id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'users': ", err.message);
                     callback(false);
                 } 
                 else {
-                    db.run("INSERT INTO users (name, email, password, role_id, active) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 0, 1)", function(err) {
+                    db.run("INSERT INTO users (name, email, password, role_id, group_id, active) VALUES ('admin', 'admin@email.com', '$2b$10$guYiV7swGTprgsqMKTHmhuzd7xE2qV5yD9gfoNinjZKslcySP7T5K', 0, 1, 1)", function(err) {
                         if (err) {
                             console.error("Fehler beim Initialisieren der Tabelle 'users': ", err.message);
                             callback(false);
@@ -186,40 +176,6 @@ function initializeUsersTable(db, callback) {
     });
 }
 
-function initializeUserGroupsTable(db, callback) {
-    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='usergroups'", function(err, row) {
-        if (err) {
-            console.error("Fehler beim Abfragen der Tabelle 'usergroups': ", err.message);
-            callback(false);
-            return;
-        }
-
-        if (!row) {
-            db.run("CREATE TABLE usergroups (user_id INTEGER, group_id INTEGER, role_id INTEGER, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (group_id) REFERENCES groups(id), FOREIGN KEY (role_id) REFERENCES roles(role_id), PRIMARY KEY (user_id, group_id))", function(err) {
-                if (err) {
-                    console.error("Fehler beim Erstellen der Tabelle 'usergroups': ", err.message);
-                    callback(false);
-                } 
-                else {
-                    db.run("INSERT INTO usergroups (user_id, group_id, role_id) VALUES((SELECT id FROM users WHERE email = 'admin@email.com'), (SELECT id FROM groups WHERE name = 'demo'), (SELECT role_id FROM roles WHERE role_id = 0))", function(err) {
-                        if (err) {
-                            console.error("Fehler beim Initialisieren der Tabelle 'usergroups': ", err.message);
-                            callback(false);
-                        } else {
-                            console.log("Tabelle 'usergroups' erfolgreich initialisiert.");
-                            callback(true);
-                        }
-                    });
-                }
-            });
-        } 
-        else {
-            console.log("Die Tabelle 'usergroups' bereits erstellt.");
-            callback(true);
-        }
-    });
-}
-
 function initializeTripsTable(db, callback) {
     db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trips'", function(err, row) {
         if (err) {
@@ -229,7 +185,7 @@ function initializeTripsTable(db, callback) {
         }
 
         if (!row) {
-            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, group_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (group_id) REFERENCES groups(id))", function(err) {
+            db.run("CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, start TEXT NOT NULL, destination TEXT NOT NULL, date TIMESTAMP NOT NULL, transport TEXT NOT NULL, costs REAL, distance INTEGER, single_trip INTEGER NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, user_name TEXT NOT NULL, group_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (group_id) REFERENCES groups(id))", function(err) {
                 if (err) {
                     console.error("Fehler beim Erstellen der Tabelle 'trips': ", err.message);
                     callback(false);

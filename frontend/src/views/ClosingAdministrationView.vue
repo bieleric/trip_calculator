@@ -4,17 +4,19 @@
   import { faCircleCheck } from '@fortawesome/free-solid-svg-icons';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import Button from '@/components/Button.vue';
-  import ClonsingCollapse from '@/components/ClosingCollapse.vue';
+  import ClosingCollapse from '@/components/ClosingCollapse.vue';
   import TripBanner from '@/components/TripBanner.vue';
   import { useSettingsStore } from '@/stores/settingsStore';
   import { useAllTripsStore } from '@/stores/allTripsStore';
   import { useClosingsStore } from '@/stores/closingsStore';
+  import { useUserStore } from '@/stores/userStore';
   import { addClosing, deleteClosing } from '@/services/apiRequests';
   import { getMonthsNames } from '@/services/helpers';
 
   const settingsStore = useSettingsStore();
   const allTripsStore = useAllTripsStore();
   const closingsStore = useClosingsStore();
+  const userStore = useUserStore();
 
   const props = defineProps({
     monthName: {
@@ -90,7 +92,12 @@
           error.value = true;
       });
     }
+  }
 
+  const getUserOfClosing = (user) => {
+    const foundUser = userStore.getAllUsers.find(userObject => userObject.id === user.userId);
+
+    return foundUser ? user.title + ' (' + user.trips.length + ')' : user.title + ' (' + user.trips.length + ') [entfernt]' 
   }
 </script>
 
@@ -107,9 +114,9 @@
       </Button>
       <p class="text-xl w-11/12 md:w-3/4 mx-auto mb-3 mt-20">Fahrten ({{ allTripsStore.getTripsOfMonthByMonthName(props.monthName).length }})</p>
       <div v-for="user in allTripsStore.getTripsClassifiedByUserForMonthAndYear(month, Number(year))">
-        <ClonsingCollapse :title="user.title + ' (' + user.trips.length + ')'" :costs="allTripsStore.getCostsByUserForMonth(user, month, Number(year))" :pending="allTripsStore.getPendingAmountOfMoneyByUserForMonth(user, month, Number(year))">
+        <ClosingCollapse :title="getUserOfClosing(user)" :costs="allTripsStore.getCostsByUserForMonth(user, month, Number(year))" :pending="allTripsStore.getPendingAmountOfMoneyByUserForMonth(user, month, Number(year))">
           <TripBanner v-for="trip in user.trips" :data="trip" :closing="true"></TripBanner>
-        </ClonsingCollapse>
+        </ClosingCollapse>
         <div class="w-11/12 md:w-3/4 mx-auto border-b border-zinc-400 my-2"></div>
       </div>
     </div>
