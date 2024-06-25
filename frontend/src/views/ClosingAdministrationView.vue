@@ -55,7 +55,7 @@
 
   const budget = computed(() => {
     if(closing.value) {
-      return isClosed ? closing.value.budget : settingsStore.getBudget;
+      return isClosed.value ? closing.value.budget : settingsStore.getBudget;
     }
     else {
       return settingsStore.getBudget;

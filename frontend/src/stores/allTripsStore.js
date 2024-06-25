@@ -154,19 +154,23 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         getCostsOfMonthByMonthName: (state) => {
             return (monthName) => {
                 const settingsStore = useSettingsStore();
-                const tripsOfMonth = state.getAllTripsClassifiedByMonthAndYear.find(month => month.title === monthName)
+                const closingsStore = useClosingsStore();
+                const tripsOfMonth = state.getAllTripsClassifiedByMonthAndYear.find(month => month.title === monthName);
+                const [month, year] = monthName.split(' ');
+                const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
+                const pricePerKilometer = closing ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
                 let costsOfMonth = 0;
+
                 if(tripsOfMonth) {
                     tripsOfMonth.trips.forEach(trip => {
                         if(trip.costs) {
                             costsOfMonth += trip.single_trip ? trip.costs : 2 * trip.costs;
                         }
                         else if(trip.distance) {
-                            costsOfMonth += trip.single_trip ? settingsStore.getPricePerKilometer * trip.distance : 2 * settingsStore.getPricePerKilometer * trip.distance;
+                            costsOfMonth += trip.single_trip ? pricePerKilometer * trip.distance : 2 * pricePerKilometer * trip.distance;
                         } 
                     });
                 }
-
                 return Number(costsOfMonth).toFixed(2);
             }
         },
