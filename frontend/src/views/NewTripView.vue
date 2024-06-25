@@ -125,14 +125,14 @@
       }
 
       addTrip(selectedTransportType.value, start.value, destination.value, costs, distance, !withReturn.value, date.value, favorites.value)
-      .then(response => {
-          message.value = "Fahrt wurde hinzugefügt.";
-          error.value = false;
-      })
-      .catch(err => {
-          message.value = "Fehler! Fahrt konnte nicht hinzugefügt werden.";
-          error.value = true;
-      });
+        .then(response => {
+            message.value = "Fahrt wurde hinzugefügt.";
+            error.value = false;
+        })
+        .catch(err => {
+            message.value = "Fehler! Fahrt konnte nicht hinzugefügt werden.";
+            error.value = true;
+        });
     }
   }
 

@@ -7,22 +7,13 @@
     import { useFavoritesStore } from '@/stores/favoritesStore';
     import { useAllTripsStore } from '@/stores/allTripsStore';
     import { useClosingsStore } from '@/stores/closingsStore';
+    import { signOut } from '@/services/helpers';
 
     const isOpen = ref(false);
 
     const toggleSidebar = () => {
         isOpen.value = !isOpen.value;
     };
-
-    const signout = () => {
-        useUserStore().resetStore();
-        useSettingsStore().resetStore();
-        useFavoritesStore().resetStore();
-        useAllTripsStore().resetStore();
-        useClosingsStore().resetStore();
-        localStorage.removeItem('jwt');
-        router.push('/signIn');
-    }
 </script>
 
 <template>
@@ -60,7 +51,7 @@
                     <li class="pt-8 pb-3 text-orange-400 font-bold">Account</li>
                     <li class="py-2">Einstellungen</li>
                     <li class="py-2">App-Design</li>
-                    <li class="py-2 cursor-pointer" @click="signout()">Logout</li>
+                    <li class="py-2 cursor-pointer" @click="signOut()">Logout</li>
                 </ul>
             </nav>
         </div>

@@ -4,7 +4,7 @@
     import router from '@/router';
     import { fetchAllData } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
-    import { isAdmin } from '@/services/helpers';
+    import { isAdmin, signOut } from '@/services/helpers';
 
     const email = ref('');
     const password = ref('');
@@ -25,15 +25,18 @@
             });
 
             localStorage.setItem("jwt", response.data.token);
-            fetchAllData(isAdmin());
+            await fetchAllData();
             router.push('/');
 
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 errorMessage.value = 'Ungültige Anmeldedaten';
             } 
+            else if(error.message === 'Could not fetch data') {
+                errorMessage.value = 'Es konnten keine Daten geladen werden.';
+            }
             else {
-                errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+                errorMessage.value = 'Ein Fehler ist aufgetreten.';
             }
         }
     };

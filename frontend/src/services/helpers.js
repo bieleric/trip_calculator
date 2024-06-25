@@ -1,4 +1,10 @@
 import { jwtDecode } from 'jwt-decode';
+import { useUserStore } from '@/stores/userStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { useFavoritesStore } from '@/stores/favoritesStore';
+import { useAllTripsStore } from '@/stores/allTripsStore';
+import { useClosingsStore } from '@/stores/closingsStore';
+import router from '../router';
 
 export const isTokenExpired = () => {
     try {
@@ -39,6 +45,16 @@ export const getUser = () => {
   } catch (err) {
     return false;
   }
+}
+
+export const signOut = () => {
+  useUserStore().resetStore();
+  useSettingsStore().resetStore();
+  useFavoritesStore().resetStore();
+  useAllTripsStore().resetStore();
+  useClosingsStore().resetStore();
+  localStorage.removeItem('jwt');
+  router.push('/signIn');
 }
 
 export const formatDate = (dateString) => {

@@ -18,13 +18,12 @@ export const fetchAllData = async () => {
         await fetchClosings();
         await fetchAllTrips();
     } catch (err) {
-        console.error('Fehler beim Abrufen der Daten:', err);
-        return false;
+        throw new Error('Could not fetch data');
     };
 }
 
 export const fetchAdminSettings = async () => {
-    axios.get(`${backendHost}/api/adminSettings`, {
+    return axios.get(`${backendHost}/api/adminSettings`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -36,11 +35,12 @@ export const fetchAdminSettings = async () => {
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
     });
 };
 
 export const fetchAllUsers = async () => {
-    axios.get(`${backendHost}/api/users`, {
+    return axios.get(`${backendHost}/api/users`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -52,11 +52,12 @@ export const fetchAllUsers = async () => {
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
     });
 };
 
 export const fetchFavoritesOfUser = async () => {
-    axios.get(`${backendHost}/api/favorites`, {
+    return axios.get(`${backendHost}/api/favorites`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -68,11 +69,12 @@ export const fetchFavoritesOfUser = async () => {
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
     });
 };
 
 export const fetchAllTrips = async () => {
-    axios.get(`${backendHost}/api/trips`, {
+    return axios.get(`${backendHost}/api/trips`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -84,11 +86,12 @@ export const fetchAllTrips = async () => {
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
     });
 };
 
 export const fetchClosings = async () => {
-    axios.get(`${backendHost}/api/closings`, {
+    return axios.get(`${backendHost}/api/closings`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -100,12 +103,13 @@ export const fetchClosings = async () => {
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
     });
 };
 
 // User Endpoints
 export const deleteUser = async (userId) => {
-    axios.delete(`${backendHost}/api/users/${userId}`, {
+    return axios.delete(`${backendHost}/api/users/${userId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -116,12 +120,13 @@ export const deleteUser = async (userId) => {
         userStore.deleteUser(userId);
     })
     .catch(err => {
-        console.error('Fehler beim Löschen des Nutzers:', err)
+        console.error('Fehler beim Löschen des Nutzers:', err);
+        throw err;
     });
 };
 
 export const inviteUser = async (email, name, role, group) => {
-    axios.post(`${backendHost}/api/users`, {
+    return axios.post(`${backendHost}/api/users`, {
         email: email.value,
         name: name.value,
         role: role.value,
@@ -138,12 +143,13 @@ export const inviteUser = async (email, name, role, group) => {
     })
     .catch(err => {
         console.error('Fehler beim Einladen des Nutzers:', err);
+        throw err;
     });
 };
 
 // Trip Endpoints
 export const addTrip = async (transport, start, destination, costs, distance, singleTrip, date, favorites) => {
-    axios.post(`${backendHost}/api/trips`, {
+    return axios.post(`${backendHost}/api/trips`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -169,11 +175,12 @@ export const addTrip = async (transport, start, destination, costs, distance, si
     })
     .catch(err => {
         console.error('Fehler beim Hinzufügen der Fahrt:', err);
+        throw err;
     });
 };
 
 export const deleteTrip = async (id) => {
-    axios.delete(`${backendHost}/api/trips/${id}`, {
+    return axios.delete(`${backendHost}/api/trips/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -184,12 +191,13 @@ export const deleteTrip = async (id) => {
         allTripsStore.deleteTrip(id);
     })
     .catch(err => {
-        console.error('Fehler beim Löschen der Fahrt:', err)
+        console.error('Fehler beim Löschen der Fahrt:', err);
+        throw err;
     });
 };
 
 export const updateTrip = async (id, transport, start, destination, costs, distance, singleTrip, date) => {
-    axios.post(`${backendHost}/api/trips/${id}`, {
+    return axios.post(`${backendHost}/api/trips/${id}`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -217,13 +225,14 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
         });
     })
     .catch(err => {
-        console.error('Fehler beim Update des Trips:', err)
+        console.error('Fehler beim Update des Trips:', err);
+        throw err;
     });
 };
 
 // Favorites Endpoints
 export const deleteFavorite = async (id) => {
-    axios.delete(`${backendHost}/api/favorites/${id}`, {
+    return axios.delete(`${backendHost}/api/favorites/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -234,12 +243,13 @@ export const deleteFavorite = async (id) => {
         favoritesStore.deleteFavorite(id);
     })
     .catch(err => {
-        console.error('Fehler beim Löschen des Favoriten:', err)
+        console.error('Fehler beim Löschen des Favoriten:', err);
+        throw err;
     });
 };
 
 export const updateFavorite = async (id, transport, start, destination, costs, distance, singleTrip) => {
-    axios.post(`${backendHost}/api/favorites/${id}`, {
+    return axios.post(`${backendHost}/api/favorites/${id}`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -265,13 +275,14 @@ export const updateFavorite = async (id, transport, start, destination, costs, d
         });
     })
     .catch(err => {
-        console.error('Fehler beim Update des Favoriten:', err)
+        console.error('Fehler beim Update des Favoriten:', err);
+        throw err;
     });
 };
 
 // Admin Settings Endpoints
 export const updateFinanceSettings = async (budget, pricePerKilometer) => {
-    axios.post(`${backendHost}/api/adminSettings`, {
+    return axios.post(`${backendHost}/api/adminSettings`, {
         budget: budget,
         pricePerKilometer: pricePerKilometer,
     }, {
@@ -288,13 +299,14 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
         });
     })
     .catch(err => {
-        console.error('Fehler beim Update des Finanzeinstellungen:', err)
+        console.error('Fehler beim Update des Finanzeinstellungen:', err);
+        throw err;
     });
 };
 
 // Closings Endpoints
 export const addClosing = async (period, budget, pricePerKilometer) => {
-    axios.post(`${backendHost}/api/closings`, {
+    return axios.post(`${backendHost}/api/closings`, {
         period: period,
         closed: 1,
         budget: budget,
@@ -310,12 +322,13 @@ export const addClosing = async (period, budget, pricePerKilometer) => {
         closingStore.addClosing(response.data.closing);
     })
     .catch(err => {
-        console.error('Fehler beim Hinzufügen des Abschlusses:', err)
+        console.error('Fehler beim Hinzufügen des Abschlusses:', err);
+        throw err;
     });
 };
 
 export const deleteClosing = async (id) => {
-    axios.delete(`${backendHost}/api/closings/${id}`, {
+    return axios.delete(`${backendHost}/api/closings/${id}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -326,6 +339,7 @@ export const deleteClosing = async (id) => {
         closingsStore.deleteClosing(id);
     })
     .catch(err => {
-        console.error('Fehler beim Löschen des Abschlusses:', err)
+        console.error('Fehler beim Löschen des Abschlusses:', err);
+        throw err;
     });
 };
