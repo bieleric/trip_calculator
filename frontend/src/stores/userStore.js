@@ -20,8 +20,9 @@ export const useUserStore = defineStore('userStore', {
                 this.users.push(user);
             })
         },
-        addUser(email, name, role, active) {
-            this.users.push({ email, name, role_id: role, active, role_name: Number(role) === 1 ? 'Admin' : 'Nutzer' });
+        addUser(user) {
+            user['role_name'] = user.role_id === 1 || user.role_id === 0 ? 'Admin' : 'Nutzer';
+            this.users.push(user);
         },
         deleteUser(userId) {
             this.users = this.users.filter(user => user.id !== userId)

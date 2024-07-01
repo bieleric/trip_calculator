@@ -130,7 +130,13 @@ app.post('/api/users', validateApiKey, validateToken, authorizeAdmin, (req, res)
       return res.status(400).json({ error: err.message });
     }
 
-    return res.status(200).json({ message: 'success' });
+    db.all("SELECT * FROM users WHERE group_id = ? AND email = ?", [groupId, email], (err, row) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+  
+      return res.status(200).json({ message: 'success', user: row });
+    });
   });
 });
 

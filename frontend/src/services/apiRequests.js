@@ -4,7 +4,6 @@ import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useAllTripsStore } from "@/stores/allTripsStore";
 import { useClosingsStore } from "@/stores/closingsStore";
-import { getUser } from "./helpers";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 const backendHost = import.meta.env.VITE_BACKEND;
@@ -31,7 +30,7 @@ export const fetchAdminSettings = async () => {
     })
     .then(response => {
         const settingsStore = useSettingsStore();
-        settingsStore.setupSettingsStore(response.data.settings[0])
+        settingsStore.setupSettingsStore(response.data.settings[0]);
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
@@ -139,7 +138,7 @@ export const inviteUser = async (email, name, role, group) => {
     })
     .then(response => {
         const userStore = useUserStore();
-        userStore.addUser(email.value, name.value, role.value, 0);
+        userStore.addUser(response.data.user[0]);
     })
     .catch(err => {
         console.error('Fehler beim Einladen des Nutzers:', err);
