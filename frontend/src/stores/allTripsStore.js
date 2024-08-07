@@ -6,8 +6,7 @@ import { getMonthAsNumeral, getMonthsNames, getUser } from '@/services/helpers';
 
 const getDefaultState = () => {
     return {
-        allTrips: [],
-        monthNames: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'September', 'Oktober', 'November', 'Dezember']
+        allTrips: []
     }
 }
 
@@ -20,7 +19,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
 
             state.getAllTrips.forEach((trip) => {
                 const date = new Date(trip.date);
-                const monthYear = `${state.monthNames[date.getMonth()]} ${date.getFullYear()}`;
+                const monthYear = `${getMonthsNames()[date.getMonth()]} ${date.getFullYear()}`;
 
                 if(!classifiedTrips[monthYear]) {
                     classifiedTrips[monthYear] = { title: monthYear, trips: []}
@@ -37,8 +36,8 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             classifiedArray.sort((a, b) => {
                 const [monthA, yearA] = a.title.split(' ');
                 const [monthB, yearB] = b.title.split(' ');
-                const dateA = new Date(`${yearA}-${state.monthNames.indexOf(monthA) + 1}-01`);
-                const dateB = new Date(`${yearB}-${state.monthNames.indexOf(monthB) + 1}-01`);
+                const dateA = new Date(`${yearA}-${getMonthsNames().indexOf(monthA) + 1}-01`);
+                const dateB = new Date(`${yearB}-${getMonthsNames().indexOf(monthB) + 1}-01`);
                 return dateB - dateA;
             });
 
@@ -48,11 +47,8 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             const classifiedTrips = {};
 
             state.getAllTrips.forEach((trip) => {
-                const userStore = useUserStore();
-                const userOfTrip = userStore.getActiveUsers.find(activeUser => activeUser.id === trip.user_id);
-
                 if(!classifiedTrips[trip.user_id]) {
-                    classifiedTrips[trip.user_id] = { userId: trip.user_id, userName: userOfTrip.name, trips: []}
+                    classifiedTrips[trip.user_id] = { userId: trip.user_id, userName: trip.user_name, trips: []}
                 }
 
                 classifiedTrips[trip.user_id].trips.push(trip);
@@ -85,7 +81,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
 
             state.getAllTrips.forEach((trip) => {
                 const date = new Date(trip.date);
-                const monthYear = `${state.monthNames[date.getMonth()]} ${date.getFullYear()}`;
+                const monthYear = `${getMonthsNames()[date.getMonth()]} ${date.getFullYear()}`;
 
                 if(!classifiedTrips[monthYear]) {
                     classifiedTrips[monthYear] = { title: monthYear, userId: currentUser.userId, trips: []}
@@ -104,8 +100,8 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             classifiedArray.sort((a, b) => {
                 const [monthA, yearA] = a.title.split(' ');
                 const [monthB, yearB] = b.title.split(' ');
-                const dateA = new Date(`${yearA}-${state.monthNames.indexOf(monthA) + 1}-01`);
-                const dateB = new Date(`${yearB}-${state.monthNames.indexOf(monthB) + 1}-01`);
+                const dateA = new Date(`${yearA}-${getMonthsNames().indexOf(monthA) + 1}-01`);
+                const dateB = new Date(`${yearB}-${getMonthsNames().indexOf(monthB) + 1}-01`);
                 return dateB - dateA;
             });
 
@@ -140,14 +136,14 @@ export const useAllTripsStore = defineStore('allTripsStore', {
         getTripsOfCurrentMonth: (state) => {
             return state.getAllMyTripsClassified.filter(tripMonth => {
                 const [month, year] = tripMonth.title.split(' ');
-                const date = new Date(`${year}-${state.monthNames.indexOf(month) + 1}-01`);
+                const date = new Date(`${year}-${getMonthsNames().indexOf(month) + 1}-01`);
                 return date.getMonth() === new Date().getMonth();
             });
         },
         getTripsOfLastMonth: (state) => {
             return state.getAllMyTripsClassified.filter(tripMonth => {
                 const [month, year] = tripMonth.title.split(' ');
-                const date = new Date(`${year}-${state.monthNames.indexOf(month) + 1}-01`);
+                const date = new Date(`${year}-${getMonthsNames().indexOf(month) + 1}-01`);
                 return date.getMonth() === new Date().getMonth() - 1;
             });
         },
