@@ -2,9 +2,10 @@
     import { ref, watch } from 'vue';
     import axios from 'axios';
     import router from '@/router';
-    import { fetchAllData } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
 
+    let name = ref('');
+    let email = ref('');
     let password = ref('');
     let password2 = ref('');
     let errorMessage = ref('');
@@ -18,7 +19,6 @@
     const apiKey = import.meta.env.VITE_API_KEY;
 
     const isPasswordValid = () => {
-        console.log(passwordIsValid.value)
         if(password.value.length < 8) {
             hasMinLength.value = false;
             passwordIsValid.value = false;
@@ -67,7 +67,7 @@
 
     watch(password, isPasswordValid);
 
-    const setPassword = async () => {
+    const signUp = async () => {
         if(!passwordIsValid.value) {
             errorMessage.value = 'Bitte beachten Sie die Vorgaben für das Passwort.';
             return;
@@ -76,10 +76,10 @@
             errorMessage.value = 'Die Passwörter müssen übereinstimmen.';
             return;
         }
-
-        console.log('Password is valid')
-        /*try {
-            const response = await axios.post('http://localhost:3000/setPassword', {
+        
+        try {
+            const response = await axios.post('http://localhost:3000/signUp', {
+                name: name.value,
                 email: email.value,
                 password: password.value
             }, {
@@ -88,17 +88,12 @@
                 }
             });
 
-            localStorage.setItem("jwt", response.data.token);
             router.push('/signIn');
 
         } catch (error) {
-            if (error.response && error.response.status === 401) {
-                errorMessage.value = 'Ungültige Anmeldedaten';
-            } 
-            else {
-                errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
-            }
-        }*/
+            console.error(error.message)
+            errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+        }
     };
 </script>
 
@@ -107,10 +102,16 @@
         <div class="logo w-7/12 md:w-3/12">
             <img src="/logo.png" alt="Logo">
         </div>
-        <div class="login mt-20">
-            <p class="text-2xl">Setze dein Passwort</p>
+        <div class="login mt-10">
+            <p class="text-2xl">Registrieren</p>
             <div>
-                <form @submit.prevent="setPassword">
+                <form @submit.prevent="signUp">
+                    <div class="my-3">
+                        <input v-model="name" name="name" type="text" required class="w-full text-sm px-4 py-3 outline-none border-2 focus:border-slate-500 text-zinc-800" placeholder="Name" />
+                    </div>
+                    <div class="mb-7">
+                        <input v-model="email" name="email" type="email" required class="w-full text-sm px-4 py-3 outline-none border-2 focus:border-slate-500 text-zinc-800" placeholder="E-Mail" />
+                    </div>
                     <div class="my-3">
                         <input v-model="password" name="password" type="password" required class="w-full text-sm px-4 py-3 outline-none border-2 focus:border-slate-500 text-zinc-800" placeholder="Passwort" />
                     </div>
@@ -125,7 +126,7 @@
                         <li :class="{ 'text-green-500': hasSpecialChar }">mind. 1 Sonderzeichen</li>
                     </ul>
                     <p v-if="errorMessage" class="error mb-3 text-red-500 w-80">{{ errorMessage }}</p>
-                    <button type="submit"><Button button-text="Passwort setzen"></Button></button>
+                    <button type="submit"><Button button-text="Registieren"></Button></button>
                 </form>
             </div>
         </div>

@@ -1,12 +1,6 @@
 <script setup>
     import { ref } from 'vue';
-    import router from '@/router';
     import { isAdmin } from '@/services/helpers';
-    import { useUserStore } from '@/stores/userStore';
-    import { useSettingsStore } from '@/stores/settingsStore';
-    import { useFavoritesStore } from '@/stores/favoritesStore';
-    import { useAllTripsStore } from '@/stores/allTripsStore';
-    import { useClosingsStore } from '@/stores/closingsStore';
     import { signOut } from '@/services/helpers';
 
     const isOpen = ref(false);
@@ -51,7 +45,7 @@
                     <li class="pt-8 pb-3 text-orange-400 font-bold">Account</li>
                     <li class="py-2">Einstellungen</li>
                     <li class="py-2">App-Design</li>
-                    <li class="py-2 cursor-pointer" @click="signOut()">Logout</li>
+                    <li class="py-2 cursor-pointer" @click="signOut()">Abmelden</li>
                 </ul>
             </nav>
         </div>

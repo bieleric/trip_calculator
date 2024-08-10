@@ -67,6 +67,21 @@ const authorizeAdmin = (req, res, next) => {
   });
 }
 
+// Sign Up Endpoints
+app.post('/signUp', async (req, res) => {
+  const { name, email, password } = req.body;
+  const saltRounds = 10;
+  const hashedPassword = await bcryptjs.hash(password, saltRounds);
+
+  db.run("INSERT INTO users (email, name, password, role_id, active) VALUES (?, ?, ?, ?, ?)", [email, name, hashedPassword, 2, 1], (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    return res.status(200).json({ message: 'Success' });
+  });
+});
+
 // Sign In Endpoints
 app.post('/signIn', (req, res) => {
   const { email, password } = req.body;

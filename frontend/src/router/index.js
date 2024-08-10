@@ -5,11 +5,12 @@ import HomeView from '@/views/HomeView.vue'
 import NewTripView from '@/views/NewTripView.vue'
 import MyTripsView from '@/views/MyTripsView.vue'
 import userAdministrationView from '@/views/UserAdministrationView.vue';
-import SetPasswordView from '@/views/SetPasswordView.vue';
+import SignUpView from '@/views/SignUpView.vue';
 import FinanceAdministrationView from '@/views/FinanceAdministrationView.vue';
 import ClosingAdministrationOverviewView from '@/views/ClosingAdministrationOverviewView.vue';
 import ClosingAdministrationView from '@/views/ClosingAdministrationView.vue';
 import ClosingView from '@/views/ClosingView.vue';
+import JoinGroupView from '@/views/JoinGroupView.vue';
 import { useFavoritesStore } from '@/stores/favoritesStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
@@ -26,9 +27,17 @@ const router = createRouter({
       component: SignInView
     },
     {
-      path: '/setPassword',
-      name: 'setPassword',
-      component: SetPasswordView
+      path: '/signUp',
+      name: 'signUp',
+      component: SignUpView
+    },
+    {
+      path: '/joinGroup',
+      name: 'joinGroup',
+      component: JoinGroupView,
+      meta: {
+        requiresAuth: true
+      },
     },
     {
       path: '/',

@@ -2,14 +2,21 @@
   import { ref, onMounted } from 'vue';
   import { RouterView } from 'vue-router'
   import { fetchAllData } from './services/apiRequests';
-  import { isTokenExpired } from './services/helpers';
+  import { isTokenExpired, getUser } from './services/helpers';
   import { signOut } from './services/helpers';
+  import router from './router';
 
   const loading = ref(true);
 
   const loadData = async () => {
     if (!isTokenExpired()) {
       try {
+        if(!getUser().groupId) {
+          router.push('/joinGroup');
+          loading.value = false;
+          return;
+        }
+
         await fetchAllData();
       } catch (err) {
         signOut();
