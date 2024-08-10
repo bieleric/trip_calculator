@@ -30,6 +30,16 @@ function checkDatabaseAndCreateTables(db) {
                 resolve(true);
             }
         });
+        initializeInvitationsTable(db, (success) => {
+            if (!success) {
+                console.error("Fehler beim Initialisieren der Tabelle 'invitations'.");
+                reject(false);
+            } 
+            else {
+                console.log("Die Tabelle 'invitations' ist einsatzbereit.");
+                resolve(true);
+            }
+        });
         initializeTripsTable(db, (success) => {
             if (!success) {
                 console.error("Fehler beim Initialisieren der Tabelle 'trips'.");
@@ -171,6 +181,33 @@ function initializeUsersTable(db, callback) {
         } 
         else {
             console.log("Die Tabelle 'users' bereits erstellt.");
+            callback(true);
+        }
+    });
+}
+
+function initializeInvitationsTable(db, callback) {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='invitations'", function(err, row) {
+        if (err) {
+            console.error("Fehler beim Abfragen der Tabelle 'invitations': ", err.message);
+            callback(false);
+            return;
+        }
+
+        if (!row) {
+            db.run("CREATE TABLE invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, invitation_token TEXT UNIQUE,expiration_date DATETIME, used INTEGER DEFAULT 0, FOREIGN KEY (group_id) REFERENCES groups(id));", function(err) {
+                if (err) {
+                    console.error("Fehler beim Erstellen der Tabelle 'invitations': ", err.message);
+                    callback(false);
+                } 
+                else {
+                    console.log("Tabelle 'invitations' erfolgreich erstellt.");
+                    callback(true);
+                }
+            });
+        } 
+        else {
+            console.log("Die Tabelle 'invitations' bereits erstellt.");
             callback(true);
         }
     });

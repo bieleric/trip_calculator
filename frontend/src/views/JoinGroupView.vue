@@ -1,5 +1,6 @@
 <script setup>
     import { ref } from 'vue';
+    import { useRoute } from 'vue-router';
     import axios from 'axios';
     import router from '@/router';
     import { fetchAllData } from '@/services/apiRequests';
@@ -9,35 +10,31 @@
     const invitationLink = ref('');
     const errorMessage = ref('');
 
+    const route = useRoute();
+    invitationLink.value = route.params.token ? `${window.location.origin}${route.fullPath}` : '';
+
     const apiKey = import.meta.env.VITE_API_KEY;
     const backendHost = import.meta.env.VITE_BACKEND;
 
     const joinGroup = async () => {
-        /*try {
-            const response = await axios.post(`${backendHost}/signIn`, {
-                email: email.value,
-                password: password.value
+        const token = invitationLink.value.split("/joinGroup/").pop()
+        try { 
+            const response = await axios.post(`${backendHost}/api/users/joinGroup`, {
+                invitationToken: token,
             }, {
                 headers: {
-                    'x-api-key': apiKey
+                    'x-api-key': apiKey,
+                    'Authorization': localStorage.getItem('jwt')
                 }
             });
-
+            
             localStorage.setItem("jwt", response.data.token);
             await fetchAllData();
-            router.push('/');
+            router.push('/'); 
 
         } catch (error) {
-            if (error.response && error.response.status === 401) {
-                errorMessage.value = 'Ungültige Anmeldedaten';
-            } 
-            else if(error.message === 'Could not fetch data') {
-                errorMessage.value = 'Es konnten keine Daten geladen werden.';
-            }
-            else {
-                errorMessage.value = 'Ein Fehler ist aufgetreten.';
-            }
-        }*/
+            errorMessage.value = 'Ein Fehler ist aufgetreten.';
+        }
     };
 </script>
 

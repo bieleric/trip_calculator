@@ -3,6 +3,7 @@ const sqlite3 = require('sqlite3').verbose();
 const dotenv = require('dotenv');
 const path = require('path');
 const bcryptjs = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { checkDatabaseAndCreateTables } = require('./services/initializeDatabase.js');
 const { getUserByEmail } = require('./services/databaseQueries.js');
@@ -130,8 +131,8 @@ app.get('/api/users', validateApiKey, validateToken, (req, res) => {
   });
 });
 
-app.post('/api/users', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { email, name, role } = req.body;
+app.post('/api/users/removeUser', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { userId } = req.body;
 
   const token = req.headers['authorization'];
   let groupId = '';
@@ -139,19 +140,17 @@ app.post('/api/users', validateApiKey, validateToken, authorizeAdmin, (req, res)
   jwt.verify(token, jwtKey, (err, decoded) => {
     groupId = decoded.group_id
   });
-  
-  db.run("INSERT INTO users (email, name, password, role_id, group_id, active) VALUES (?, ?, ?, ?, ?, ?)", [email, name, '', role, groupId, 0], (err, rows) => {
+
+  db.run("UPDATE users SET group_id = NULL WHERE id = ? AND group_id = ?", [userId, groupId], function(err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    db.all("SELECT * FROM users WHERE group_id = ? AND email = ?", [groupId, email], (err, row) => {
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
-  
-      return res.status(200).json({ message: 'success', user: row });
-    });
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.status(200).json({ message: 'Success' });
   });
 });
 
@@ -175,6 +174,90 @@ app.delete('/api/users/:userId', validateApiKey, validateToken, authorizeAdmin, 
     }
 
     return res.status(200).json({ message: 'Success' });
+  });
+});
+
+app.post('/api/users/joinGroup', validateApiKey, validateToken, async (req, res) => {
+  const { invitationToken } = req.body;
+  const token = req.headers['authorization'];
+  let userId = '';
+  let email = '';
+  let userName = '';
+  let role_id = '';
+
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId,
+    email = decoded.email,
+    userName = decoded.name,
+    role_id = decoded.role_id
+  });
+
+  db.all("SELECT * FROM invitations WHERE invitation_token = ?", [invitationToken], (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if(rows.length > 0) {
+      const groupId = rows[0].group_id
+      const used = rows[0].used
+      const expirationDate = rows[0].expiration_date
+  
+      if(groupId && !used && new Date() <= new Date(expirationDate)) {
+        db.run("UPDATE users SET group_id = ? WHERE id = ?", [groupId, userId], function(err) {
+          if (err) {
+            return res.status(400).json({ error: err.message });
+          }
+      
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+  
+          db.run("UPDATE invitations SET used = 1 WHERE invitation_token = ?", [invitationToken], function(err) {
+            if (err) {
+              return res.status(400).json({ error: err.message });
+            }
+        
+            if (this.changes === 0) {
+              return res.status(404).json({ error: 'Invitation not found' });
+            }
+  
+            const newToken = jwt.sign({
+              userId: userId,
+              email: email,
+              userName: userName,
+              role_id: role_id,
+              group_id: groupId,
+            }, jwtKey, { expiresIn: '1h' });
+        
+            return res.status(200).json({ token: newToken, message: 'Success' });
+          });
+        });
+      }
+      else {
+        return res.status(400).json({ error: 'Invitation link not valid' });
+      }
+    }
+    else {
+      return res.status(400).json({ error: 'Invitation link not valid' });
+    }
+  });
+});
+
+// Invitations Endpoints
+app.post('/api/createInvitation', validateApiKey, validateToken, authorizeAdmin, async (req, res) => {
+  const { groupId } = req.body;
+  
+  const invitationToken = crypto.randomBytes(20).toString('hex');
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 3); // link is 3 days valid
+
+  db.run(`INSERT INTO invitations (group_id, invitation_token, expiration_date) VALUES (?, ?, ?)`, [groupId, invitationToken, expirationDate], function(err) {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    // TODO: change hostname
+    return res.status(200).json({ message: 'Success', invitationLink: `http://localhost:5173/joinGroup/${invitationToken}` });
   });
 });
 

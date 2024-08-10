@@ -30,9 +30,14 @@
                 router.push('/');
             }
             else {
-                router.push('/joinGroup');
+                const token = router.currentRoute.value.query.token;
+                if (token) {
+                    router.push({ name: 'joinGroup', params: { token } });
+                } else {
+                    router.push('/joinGroup');
+                }
             }
-            
+
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 errorMessage.value = 'Ungültige Anmeldedaten';

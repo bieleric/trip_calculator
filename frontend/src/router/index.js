@@ -22,7 +22,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/signIn',
+      path: '/signIn/:token?',
       name: 'signIn',
       component: SignInView
     },
@@ -32,7 +32,7 @@ const router = createRouter({
       component: SignUpView
     },
     {
-      path: '/joinGroup',
+      path: '/joinGroup/:token?',
       name: 'joinGroup',
       component: JoinGroupView,
       meta: {
@@ -116,14 +116,22 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   if(to.meta.requiresAuth) {
     if(isTokenExpired()) {
-      useUserStore().resetStore();
-      useSettingsStore().resetStore();
-      useFavoritesStore().resetStore();
-      useAllTripsStore().resetStore();
-      useClosingsStore().resetStore();
-      localStorage.removeItem('jwt');
-      console.error('Session expired');
-      return next('/signIn');
+      const token = to.params.token;
+      if (token) {
+        localStorage.removeItem('jwt');
+        console.error('Session expired');
+        return next({ path: '/signIn', query: { redirect: to.fullPath, token: token } });
+      }
+      else {
+        useUserStore().resetStore();
+        useSettingsStore().resetStore();
+        useFavoritesStore().resetStore();
+        useAllTripsStore().resetStore();
+        useClosingsStore().resetStore();
+        localStorage.removeItem('jwt');
+        console.error('Session expired');
+        return next('/signIn');
+      }
     }
   }
   if(to.meta.requiresAuth && to.meta.requiresAdminRole) {

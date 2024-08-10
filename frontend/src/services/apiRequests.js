@@ -107,6 +107,25 @@ export const fetchClosings = async () => {
 };
 
 // User Endpoints
+export const removeUserFromGroup = async (userId) => {
+    return axios.post(`${backendHost}/api/users/removeUser`, {
+        userId: userId
+    }, {
+        headers: {
+            'x-api-key': apiKey,
+            'Authorization': localStorage.getItem('jwt')
+        }
+    })
+    .then(response => {
+        const userStore = useUserStore();
+        userStore.deleteUser(userId);
+    })
+    .catch(err => {
+        console.error('Fehler beim Entfernen des Nutzers:', err);
+        throw err;
+    });
+};
+
 export const deleteUser = async (userId) => {
     return axios.delete(`${backendHost}/api/users/${userId}`, {
         headers: {
@@ -124,12 +143,9 @@ export const deleteUser = async (userId) => {
     });
 };
 
-export const inviteUser = async (email, name, role, group) => {
-    return axios.post(`${backendHost}/api/users`, {
-        email: email.value,
-        name: name.value,
-        role: role.value,
-        group: group
+export const createInvitation = async (groupId) => {
+    return axios.post(`${backendHost}/api/createInvitation`, {
+        groupId: groupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -137,11 +153,29 @@ export const inviteUser = async (email, name, role, group) => {
         }
     })
     .then(response => {
-        const userStore = useUserStore();
-        userStore.addUser(response.data.user[0]);
+        return response.data.invitationLink;
     })
     .catch(err => {
-        console.error('Fehler beim Einladen des Nutzers:', err);
+        console.error('Fehler beim Erstellen des Links:', err);
+        throw err;
+    });
+};
+
+export const joinGroup = async (token, email) => {
+    return axios.post(`${backendHost}/api/groups/joinGroup`, {
+        token: token,
+        email: email
+    }, {
+        headers: {
+            'x-api-key': apiKey,
+            'Authorization': localStorage.getItem('jwt')
+        }
+    })
+    .then(response => {
+        console.log(response.data);
+    })
+    .catch(err => {
+        console.error('Fehler beim Beitreten der Gruppe:', err);
         throw err;
     });
 };

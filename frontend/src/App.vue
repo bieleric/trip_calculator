@@ -12,7 +12,13 @@
     if (!isTokenExpired()) {
       try {
         if(!getUser().groupId) {
-          router.push('/joinGroup');
+          const route = router.currentRoute.value;
+          const token = route.params.token || null;
+
+          if(token) {
+            router.push({ name: 'joinGroup', params: { token } });
+          }
+
           loading.value = false;
           return;
         }
