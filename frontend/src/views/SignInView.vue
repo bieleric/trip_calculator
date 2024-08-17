@@ -2,8 +2,10 @@
     import { ref } from 'vue';
     import axios from 'axios';
     import router from '@/router';
-    import { fetchAllData } from '@/services/apiRequests';
+    import { getUser } from '@/services/helpers';
+    import { fetchAllDataByGroup } from '@/services/apiRequests';
     import Button from '@/components/Button.vue';
+    import { useGroupAndRoleStore } from '@/stores/groupAndRoleStore';
 
     const email = ref('');
     const password = ref('');
@@ -24,9 +26,12 @@
             });
 
             localStorage.setItem("jwt", response.data.token);
+            const user = getUser();
+            const currentGroupId = response.data.selectedGroupId;
 
-            if(response.data.user.group_id) {
-                await fetchAllData();
+            // check if the user is part of a group
+            if(user.groups.length > 0) {
+                await fetchAllDataByGroup(currentGroupId);
                 router.push('/');
             }
             else {
@@ -43,9 +48,11 @@
                 errorMessage.value = 'Ungültige Anmeldedaten';
             } 
             else if(error.message === 'Could not fetch data') {
+                console.error(error)
                 errorMessage.value = 'Es konnten keine Daten geladen werden.';
             }
             else {
+                console.error(error)
                 errorMessage.value = 'Ein Fehler ist aufgetreten.';
             }
         }

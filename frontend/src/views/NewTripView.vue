@@ -6,8 +6,9 @@
   import TextInput from '@/components/inputs/TextInput.vue';
   import DateInput from '@/components/inputs/DateInput.vue';
   import Switch from '@/components/inputs/Switch.vue';
-  import { addTrip, updateTrip, updateFavorite } from '@/services/apiRequests';
+  import { addTripToGroup, updateTrip, updateFavorite } from '@/services/apiRequests';
   import { useClosingsStore } from '@/stores/closingsStore';
+import { useGroupAndRoleStore } from '@/stores/groupAndRoleStore';
 
   const props = defineProps({
     transport: {
@@ -68,16 +69,12 @@
   let message = ref('');
   let error = ref(false);
 
-  const initializeRefs = () => {
-    selectedTransportType.value = props.transport ? props.transport : '';
-    start.value = props.start ? props.start : '';
-    destination.value = props.destination ? props.destination : '';
-    withReturn.value = props.singleTrip === '1' ? false : true;
-    costsOrDistance.value = props.costs ? props.costs : props.distance;
-    date.value = props.date ? props.date : '';
-  }
-
-  initializeRefs();
+  selectedTransportType.value = props.transport ? props.transport : '';
+  start.value = props.start ? props.start : '';
+  destination.value = props.destination ? props.destination : '';
+  withReturn.value = props.singleTrip === '1' ? false : true;
+  costsOrDistance.value = props.costs ? props.costs : props.distance;
+  date.value = props.date ? props.date : '';
 
   const costsOrDistanceName = computed(() => {
     return selectedTransportType.value === 'car' ? 'Distanz' : 'Kosten'
@@ -124,7 +121,7 @@
         return;
       }
 
-      addTrip(selectedTransportType.value, start.value, destination.value, costs, distance, !withReturn.value, date.value, favorites.value)
+      addTripToGroup(selectedTransportType.value, start.value, destination.value, costs, distance, !withReturn.value, date.value, favorites.value)
         .then(response => {
             message.value = "Fahrt wurde hinzugefügt.";
             error.value = false;

@@ -1,20 +1,17 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const dotenv = require('dotenv');
 const path = require('path');
 const bcryptjs = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+
 const { checkDatabaseAndCreateTables } = require('./services/initializeDatabase.js');
-const { getUserByEmail } = require('./services/databaseQueries.js');
+const { validateApiKey, validateToken, authorizeAdmin } = require('./services/middleware.js');
+const { jwtKey, port } = require('./services/constants.js');
+const { getUserByEmail, insertUser, getUserIdByEmail, insertGroupMember, getGroupsByUserId, getGroupsAndUserInformationByUserId, getAdminSettingsByGroupId, getUsersByGroupId, getFavoritesByUserIdAndGroupId, getTripsByGroupId, getClosingsByGroupId, resetSelectedGroupByUserId, setSelectedGroupByUserIdAndGroupId, insertInvitation, getInvitationByToken, setInvitationAsUsed, deleteUserFromGroupByUserIdAndGroupId, insertFavorite, getLatestFavorite, insertTrip, getLatestTrip, deleteTripByUserIdAndTripIdAndGroupId, updateTripByUserIdAndTripIdAndGroupId, deleteFavoriteByUserIdAndTripIdAndGroupId, updateFavoriteByUserIdAndTripIdAndGroupId, updateAdminSettingsByGroupId, insertClosing, getLatestClosingByGroupId, deleteClosingByClosingIdAndGroupId } = require('./services/databaseQueries.js');
 
 const app = express();
-dotenv.config();
 app.use(express.json());
-
-const port = process.env.PORT || 3000;
-const apiKey = process.env.API_KEY;
-const jwtKey = process.env.JWT_KEY;
 
 const db = new sqlite3.Database('../trip_calculator.db', (err) => {
   if (err) {
@@ -31,55 +28,25 @@ const db = new sqlite3.Database('../trip_calculator.db', (err) => {
 
 checkDatabaseAndCreateTables(db);
 
-// middleware for api validation
-const validateApiKey = (req, res, next) => {
-  const requestApiKey = req.headers['x-api-key'];
-  if (!requestApiKey || requestApiKey !== apiKey) {
-    return res.status(403).json({ message: 'Forbidden' });
-  }
-  next();
-}
-
-// middleware for token validation
-const validateToken = (req, res, next) => {
-  const token = req.headers['authorization'];
-
-  if(!token) {
-    return res.status(401).json({ error: 'Access denied' });
-  }
-
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    if(err) {
-      return res.status(403).json({ error: 'Invalid token' });
-    }
-    next();
-  });
-}
-
-// middleware for authorization
-const authorizeAdmin = (req, res, next) => {
-  const token = req.headers['authorization'];
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    if(decoded.role_id !== 1 && decoded.role_id !== 0) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    next();
-  });
-}
-
 // Sign Up Endpoints
 app.post('/signUp', async (req, res) => {
   const { name, email, password } = req.body;
   const saltRounds = 10;
   const hashedPassword = await bcryptjs.hash(password, saltRounds);
 
-  db.run("INSERT INTO users (email, name, password, role_id, active) VALUES (?, ?, ?, ?, ?)", [email, name, hashedPassword, 2, 1], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-    return res.status(200).json({ message: 'Success' });
+    db.run(insertUser, [email, name, hashedPassword, 0], (err) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not insert user: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'Success' });
+    });
   });
 });
 
@@ -87,73 +54,337 @@ app.post('/signUp', async (req, res) => {
 app.post('/signIn', (req, res) => {
   const { email, password } = req.body;
 
-  getUserByEmail(db, email, async (err, user) => {
+  db.run("BEGIN TRANSACTION");
+
+  db.all(getUserByEmail, [email], async (err, rows) => {
     if (err) {
-      return res.status(500).json({ message: 'Internal server error' });
+        db.run("ROLLBACK");
+        console.error('Could not find user: ', err.message);
+        return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    if (!user) {
+    if (!rows) {
+      db.run("ROLLBACK");
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    user = rows[0];
 
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
+      db.run("ROLLBACK");
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({
-      userId: user.id,
-      email: user.email,
-      userName: user.name,
-      role_id: user.role_id,
-      group_id: user.group_id,
-    }, jwtKey, { expiresIn: '1h' });
+    db.all(getGroupsAndUserInformationByUserId, [user.id], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not get groups by user_id: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
 
-    res.status(200).json({ token, user, message: 'Success' });
+      groups = []; 
+      selectedGroupId = null;
+
+      rows.forEach((row) => {
+        if(row.selected === 1) {
+          selectedGroupId = row.group_id;
+        }
+
+        groups.push({
+          groupId: row.group_id,
+          groupName: row.group_name,
+          roleId: row.role_id,
+          roleName: row.role_name
+        })
+      });
+
+      const token = jwt.sign({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        active: user.active,
+        groups: groups,
+      }, jwtKey, { expiresIn: '1h' });
+  
+      db.run("COMMIT");
+      res.status(200).json({ token, selectedGroupId, message: 'Success' });
+    });
+  });
+});
+
+// Group Endpoints
+// Get groups for user
+app.get('/api/groups', validateApiKey, validateToken, (req, res) => {
+  const token = req.headers['authorization'];
+  let userId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId;
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.all(getGroupsByUserId, [userId], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not find groups of user: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', groups: rows });
+    });
+  });
+});
+
+// Select group
+app.post('/api/groups/select', validateApiKey, validateToken, (req, res) => {
+  const { groupId } = req.body;
+
+  const token = req.headers['authorization'];
+  let userId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId;
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(resetSelectedGroupByUserId, [userId], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not reset group selection: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      db.run(setSelectedGroupByUserIdAndGroupId, [userId, groupId], (err, rows) => {
+        if (err) {
+            db.run("ROLLBACK");
+            console.error('Could not set group selection: ', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+
+        db.run("COMMIT");
+        return res.status(200).json({ message: 'success' });
+      });
+    });
+  });
+});
+
+// Create invitation for group
+app.post('/api/groups/createInvitation', validateApiKey, validateToken, authorizeAdmin, async (req, res) => {
+  const { groupId } = req.body;
+  const invitationToken = crypto.randomBytes(20).toString('hex');
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 3); // link is 3 days valid
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(insertInvitation, [groupId, invitationToken, expirationDate], (err) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not create invitation: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      // TODO: change hostname
+      return res.status(200).json({ message: 'success', invitationLink: `http://localhost:5173/joinGroup/${invitationToken}` });
+    });
+  });
+});
+
+// Join group by invitation token
+app.post('/api/groups/joinGroup', validateApiKey, validateToken, async (req, res) => {
+  const { invitationToken } = req.body;
+  const token = req.headers['authorization'];
+  let userId = '';
+  let email = '';
+  let active = '';
+
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId
+    email = decoded.email,
+    active = decoded.active
+  });
+
+
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.all(getInvitationByToken, [invitationToken], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not find invitation: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      if(rows.length > 0) {
+        const groupId = rows[0].group_id
+        const used = rows[0].used
+        const expirationDate = rows[0].expiration_date
+    
+        if(groupId && !used && new Date() <= new Date(expirationDate)) {
+          db.run(resetSelectedGroupByUserId, [userId], (err) => {
+            if (err) {
+              db.run("ROLLBACK");
+              console.error('Could not reset selected groups: ', err.message);
+              return res.status(500).json({ error: err.message });
+            }
+
+            db.run(insertGroupMember, [userId, groupId, 2, 1], (err) => {
+              if (err) {
+                db.run("ROLLBACK");
+                console.error('Could not insert user to group members: ', err.message);
+                return res.status(500).json({ error: err.message });
+              }
+
+              db.run(setInvitationAsUsed, [invitationToken], (err) => {
+                if (err) {
+                  db.run("ROLLBACK");
+                  console.error('Could not set invitation as used: ', err.message);
+                  return res.status(500).json({ error: err.message });
+                }
+
+                db.all(getGroupsAndUserInformationByUserId, [userId], (err, rows) => {
+                  if (err) {
+                      db.run("ROLLBACK");
+                      console.error('Could not get groups by user_id: ', err.message);
+                      return res.status(500).json({ error: err.message });
+                  }
+            
+                  groups = []; 
+            
+                  rows.forEach((row) => {
+                    groups.push({
+                      groupId: row.group_id,
+                      groupName: row.group_name,
+                      roleId: row.role_id,
+                      roleName: row.role_name
+                    })
+                  });
+            
+                  const newToken = jwt.sign({
+                    userId: userId,
+                    email: email,
+                    active: active,
+                    groups: groups,
+                  }, jwtKey, { expiresIn: '1h' });
+
+                  db.run("COMMIT");
+                  return res.status(200).json({ token: newToken, message: 'success' });
+                });
+              });  
+            });
+          });
+        }
+        else {
+          db.run("ROLLBACK");
+          return res.status(400).json({ error: 'Invitation link not valid' });
+        }
+      }
+      else {
+        db.run("ROLLBACK");
+        return res.status(400).json({ error: 'Invitation link not valid' });
+      }
+    });
+  });
+});
+
+// Leave group
+app.post('/api/groups/leave', validateApiKey, validateToken, async (req, res) => {
+  const { groupId } = req.body;
+  const token = req.headers['authorization'];
+  let userId = '';
+
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(deleteUserFromGroupByUserIdAndGroupId, [userId, groupId], (err) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not leave group: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success' });
+    });
+  });
+});
+
+// Admin Settings Endpoints
+// Get admin settings for group
+app.get('/api/adminSettings/:groupId', validateApiKey, validateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.all(getAdminSettingsByGroupId, [groupId], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not find admin settings: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', settings: rows });
+    });
   });
 });
 
 // User Endpoints
-app.get('/api/users', validateApiKey, validateToken, (req, res) => {
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
+// Get users of group
+app.get('/api/users/:groupId', validateApiKey, validateToken, (req, res) => {
+  const groupId = req.params.groupId;
 
-  db.all("SELECT * FROM users WHERE group_id = ?", [groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-    return res.status(200).json({ message: 'success', users: rows });
+    db.all(getUsersByGroupId, [groupId], (err, rows) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not find admin settings: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', users: rows });
+    });
   });
 });
 
+// Remove user from group
 app.post('/api/users/removeUser', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { userId } = req.body;
+  const { userId, groupId } = req.body;
 
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-  db.run("UPDATE users SET group_id = NULL WHERE id = ? AND group_id = ?", [userId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+    db.run(deleteUserFromGroupByUserIdAndGroupId, [userId, groupId], (err) => {
+      if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not remove user from group: ', err.message);
+          return res.status(500).json({ error: err.message });
+      }
 
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'Success' });
+    });
   });
 });
 
+// TODO: delete user for account deletion
 app.delete('/api/users/:userId', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
   const userId = req.params.userId;
 
@@ -177,391 +408,356 @@ app.delete('/api/users/:userId', validateApiKey, validateToken, authorizeAdmin, 
   });
 });
 
-app.post('/api/users/joinGroup', validateApiKey, validateToken, async (req, res) => {
-  const { invitationToken } = req.body;
-  const token = req.headers['authorization'];
-  let userId = '';
-  let email = '';
-  let userName = '';
-  let role_id = '';
-
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    email = decoded.email,
-    userName = decoded.name,
-    role_id = decoded.role_id
-  });
-
-  db.all("SELECT * FROM invitations WHERE invitation_token = ?", [invitationToken], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    if(rows.length > 0) {
-      const groupId = rows[0].group_id
-      const used = rows[0].used
-      const expirationDate = rows[0].expiration_date
-  
-      if(groupId && !used && new Date() <= new Date(expirationDate)) {
-        db.run("UPDATE users SET group_id = ? WHERE id = ?", [groupId, userId], function(err) {
-          if (err) {
-            return res.status(400).json({ error: err.message });
-          }
-      
-          if (this.changes === 0) {
-            return res.status(404).json({ error: 'User not found' });
-          }
-  
-          db.run("UPDATE invitations SET used = 1 WHERE invitation_token = ?", [invitationToken], function(err) {
-            if (err) {
-              return res.status(400).json({ error: err.message });
-            }
-        
-            if (this.changes === 0) {
-              return res.status(404).json({ error: 'Invitation not found' });
-            }
-  
-            const newToken = jwt.sign({
-              userId: userId,
-              email: email,
-              userName: userName,
-              role_id: role_id,
-              group_id: groupId,
-            }, jwtKey, { expiresIn: '1h' });
-        
-            return res.status(200).json({ token: newToken, message: 'Success' });
-          });
-        });
-      }
-      else {
-        return res.status(400).json({ error: 'Invitation link not valid' });
-      }
-    }
-    else {
-      return res.status(400).json({ error: 'Invitation link not valid' });
-    }
-  });
-});
-
-// Invitations Endpoints
-app.post('/api/createInvitation', validateApiKey, validateToken, authorizeAdmin, async (req, res) => {
-  const { groupId } = req.body;
-  
-  const invitationToken = crypto.randomBytes(20).toString('hex');
-  const expirationDate = new Date();
-  expirationDate.setDate(expirationDate.getDate() + 3); // link is 3 days valid
-
-  db.run(`INSERT INTO invitations (group_id, invitation_token, expiration_date) VALUES (?, ?, ?)`, [groupId, invitationToken, expirationDate], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    // TODO: change hostname
-    return res.status(200).json({ message: 'Success', invitationLink: `http://localhost:5173/joinGroup/${invitationToken}` });
-  });
-});
-
 // Trips Endpoints
-app.get('/api/trips', validateApiKey, validateToken, (req, res) => {
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
+// Get all trips by group
+app.get('/api/trips/:groupId', validateApiKey, validateToken, (req, res) => {
+  const groupId = req.params.groupId;
 
-  db.all("SELECT * FROM trips WHERE group_id = ?", [groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-    return res.status(200).json({ message: 'success', allTrips: rows });
+    db.all(getTripsByGroupId, [groupId], (err, rows) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not find trips of group: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', allTrips: rows });
+    });
   });
 });
 
+// Add trip with favorite or just add trip
 app.post('/api/trips', validateApiKey, validateToken, (req, res) => {
-  const { transport, start, destination, costs, distance, singleTrip, date, favorites } = req.body;
+  const { groupId, userName, transport, start, destination, costs, distance, singleTrip, date, favorites } = req.body;
   const token = req.headers['authorization'];
   let userId = '';
-  let groupId = '';
-  let userName = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
     userId = decoded.userId
-    userName = decoded.userName
-    groupId = decoded.group_id
   });
 
   if(favorites) {
-    db.run("INSERT INTO favorites (user_id, start, destination, transport, costs, distance, single_trip, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, transport, costs, distance, singleTrip, groupId], (err, rows) => {
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
 
-      db.get("SELECT * FROM favorites WHERE user_id = ? ORDER BY id DESC LIMIT 1", [userId], (err, favoriteRow) => {
-        if(err) {
-          return res.status(400).json({ error: err.message });
+      db.run(insertFavorite, [userId, start, destination, transport, costs, distance, singleTrip, groupId], (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not insert favorite: ', err.message);
+          return res.status(500).json({ error: err.message });
         }
-        
-        db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err, rows) => {
+
+        db.get(getLatestFavorite, [userId], (err, favoriteRow) => {
           if (err) {
-            return res.status(400).json({ error: err.message });
+            db.run("ROLLBACK");
+            console.error('Could not get latest favorite: ', err.message);
+            return res.status(500).json({ error: err.message });
           }
-      
-          db.get("SELECT * FROM trips WHERE user_id = ? ORDER BY id DESC LIMIT 1", [userId], (err, tripRow) => {
-            if(err) {
-              return res.status(400).json({ error: err.message });
+
+          db.run(insertTrip, [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err) => {
+            if (err) {
+              db.run("ROLLBACK");
+              console.error('Could not insert trip: ', err.message);
+              return res.status(500).json({ error: err.message });
             }
 
-            return res.status(200).json({ message: 'success', favorite: favoriteRow, trip: tripRow });
+            db.get(getLatestTrip, [userId], (err, tripRow) => {
+              if(err) {
+                db.run("ROLLBACK");
+                console.error('Could not insert trip: ', err.message);
+                return res.status(500).json({ error: err.message });
+              }
+
+              db.run("COMMIT");
+              return res.status(200).json({ message: 'success', favorite: favoriteRow, trip: tripRow });
+            })
           });
-        });
+        })
       });
     });
   }
   else {
-    db.run("INSERT INTO trips (user_id, start, destination, date, transport, costs, distance, single_trip, group_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err, rows) => {
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
-  
-      db.get("SELECT * FROM trips WHERE user_id = ? ORDER BY id DESC LIMIT 1", [userId], (err, tripRow) => {
-        if(err) {
-          return res.status(400).json({ error: err.message });
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+
+      db.run(insertTrip, [userId, start, destination, date, transport, costs, distance, singleTrip, groupId, userName], (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not insert trip: ', err.message);
+          return res.status(500).json({ error: err.message });
         }
 
-        return res.status(200).json({ message: 'success', favorite: null, trip: tripRow });
+        db.get(getLatestTrip, [userId], (err, tripRow) => {
+          if(err) {
+            db.run("ROLLBACK");
+            console.error('Could not insert trip: ', err.message);
+            return res.status(500).json({ error: err.message });
+          }
+
+          db.run("COMMIT");
+          return res.status(200).json({ message: 'success', favorite: null, trip: tripRow });
+        })
       });
     });
   }
 });
 
-app.delete('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
-  const tripId = req.params.id;
+// Delete a trip
+app.delete('/api/trips/:tripId/group/:groupId', validateApiKey, validateToken, (req, res) => {
+  const tripId = req.params.tripId;
+  const groupId = req.params.groupId;
   const token = req.headers['authorization'];
   let userId = '';
-  let groupId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    groupId = decoded.group_id
+    userId = decoded.userId
   });
 
-  db.run("DELETE FROM trips WHERE user_id = ? AND id = ? AND group_id = ?", [userId, tripId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Trip not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
-  });
-});
-
-app.post('/api/trips/:id', validateApiKey, validateToken, (req, res) => {
-  const tripId = req.params.id;
-  const { transport, start, destination, costs, distance, date, singleTrip } = req.body;
-
-  const token = req.headers['authorization'];
-  let userId = '';
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    groupId = decoded.group_id
-  });
-
-  db.run("UPDATE trips SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, date = ?, single_trip = ? WHERE user_id = ? AND id = ? AND group_id = ?", [start, destination, transport, costs, distance, date, singleTrip, userId, tripId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Trip not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
-  });
-});
-
-// Favorites Endpoints
-app.get('/api/favorites', validateApiKey, validateToken, (req, res) => {
-  const token = req.headers['authorization'];
-  let userId = '';
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    groupId = decoded.group_id
-  });
-
-  db.all("SELECT * FROM favorites WHERE user_id = ? AND group_id = ?", [userId, groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    return res.status(200).json({ message: 'success', favorites: rows });
-  });
-});
-
-app.delete('/api/favorites/:id', validateApiKey, validateToken, (req, res) => {
-  const favoriteId = req.params.id;
-  const token = req.headers['authorization'];
-  let userId = '';
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    groupId = decoded.group_id
-  });
-
-  db.run("DELETE FROM favorites WHERE user_id = ? AND id = ? AND group_id = ?", [userId, favoriteId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Favorite not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
-  });
-});
-
-app.post('/api/favorites/:id', validateApiKey, validateToken, (req, res) => {
-  const favoriteId = req.params.id;
-  const { transport, start, destination, costs, distance, singleTrip } = req.body;
-
-  const token = req.headers['authorization'];
-  let userId = '';
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    userId = decoded.userId,
-    groupId = decoded.group_id
-  });
-
-  db.run("UPDATE favorites SET start = ?, destination = ?, transport = ?, costs = ?, distance = ?, single_trip = ? WHERE user_id = ? AND id = ? AND group_id = ?", [start, destination, transport, costs, distance, singleTrip, userId, favoriteId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Favorite not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
-  });
-});
-
-// Admin Settings Endpoints
-app.get('/api/adminSettings', validateApiKey, validateToken, (req, res) => {
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
-
-  db.all("SELECT * FROM admin_settings WHERE group_id = ?", [groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ "error": err.message });
-    }
-
-    return res.status(200).json({ message: 'success', settings: rows });
-  });
-});
-
-app.post('/api/adminSettings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { budget, pricePerKilometer } = req.body;
-
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
-
-  db.run("UPDATE admin_settings SET budget = ?, price_per_kilometer = ? WHERE group_id = ?", [budget, pricePerKilometer, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Admin setting not found' });
-    }
-
-    return res.status(200).json({ message: 'Success' });
-  });
-});
-
-// Closings Endpoints
-app.get('/api/closings', validateApiKey, validateToken, (req, res) => {
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
-
-  db.all("SELECT * FROM closings WHERE group_id = ?", [groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    return res.status(200).json({ message: 'success', closings: rows });
-  });
-});
-
-app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { period, closed, budget, pricePerKilometer } = req.body;
-
-  const token = req.headers['authorization'];
-  let groupId = '';
-  
-  jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
-  });
-
-  db.run("INSERT INTO closings (period, closed, budget, price_per_kilometer, group_id) VALUES (?, ?, ?, ?, ?)", [period, closed, budget, pricePerKilometer, groupId], (err, rows) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    db.get("SELECT * FROM closings ORDER BY id DESC LIMIT 1", (err, closingRow) => {
+    db.run(deleteTripByUserIdAndTripIdAndGroupId, [userId, tripId, groupId], (err) => {
       if(err) {
-        return res.status(400).json({ error: err.message });
+        db.run("ROLLBACK");
+        console.error('Could not delete trip: ', err.message);
+        return res.status(500).json({ error: err.message });
       }
 
-      return res.status(200).json({ message: 'success', closing: closingRow });
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success' });      
     });
   });
 });
 
-app.delete('/api/closings/:id', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const closingId = req.params.id;
-
+// Update a trip 
+app.post('/api/trips/:tripId', validateApiKey, validateToken, (req, res) => {
+  const { transport, start, destination, costs, distance, date, singleTrip, groupId } = req.body;
+  const tripId = req.params.tripId;
   const token = req.headers['authorization'];
-  let groupId = '';
+  let userId = '';
   
   jwt.verify(token, jwtKey, (err, decoded) => {
-    groupId = decoded.group_id
+    userId = decoded.userId
   });
 
-  db.run("DELETE FROM closings WHERE id = ? AND group_id = ?", [closingId, groupId], function(err) {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Closing not found' });
-    }
+    db.run(updateTripByUserIdAndTripIdAndGroupId, [start, destination, transport, costs, distance, date, singleTrip, userId, tripId, groupId], (err) => {
+      if(err) {
+        db.run("ROLLBACK");
+        console.error('Could not insert trip: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
 
-    return res.status(200).json({ message: 'Success' });
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success' });
+    });
+  })
+});
+
+// Favorites Endpoints
+// Get favorites for user and current group
+app.get('/api/favorites/:groupId', validateApiKey, validateToken, (req, res) => {
+  const groupId = req.params.groupId;
+  const token = req.headers['authorization'];
+  let userId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId;
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.all(getFavoritesByUserIdAndGroupId, [userId, groupId], (err, rows) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not find favorites of user: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', favorites: rows });
+    });
   });
 });
+
+// Delete from favorites
+app.delete('/api/favorites/:favoriteId/group/:groupId', validateApiKey, validateToken, (req, res) => {
+  const favoriteId = req.params.favoriteId;
+  const groupId = req.params.groupId;
+  const token = req.headers['authorization'];
+  let userId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(deleteFavoriteByUserIdAndTripIdAndGroupId, [userId, favoriteId, groupId], (err) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not delete favorite of user: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success' });
+    });
+  });
+});
+
+// Update a favorite
+app.post('/api/favorites/:favoriteId', validateApiKey, validateToken, (req, res) => {
+  const favoriteId = req.params.favoriteId;
+  const { transport, start, destination, costs, distance, singleTrip, groupId } = req.body;
+
+  const token = req.headers['authorization'];
+  let userId = '';
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    userId = decoded.userId
+  });
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(updateFavoriteByUserIdAndTripIdAndGroupId, [start, destination, transport, costs, distance, singleTrip, userId, favoriteId, groupId], (err) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not update favorite of user: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success' });
+    });
+  });
+});
+
+// Admin settings endpoint
+app.post('/api/adminSettings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { budget, pricePerKilometer, groupId } = req.body;
+
+  const token = req.headers['authorization'];
+  let groups = null;
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groups = decoded.groups;
+  });
+
+  const isMemberOfGroup = groups.find((group) => group.groupId === groupId);
+
+  if(isMemberOfGroup) {
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+  
+      db.run(updateAdminSettingsByGroupId, [budget, pricePerKilometer, groupId], (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not update admin settings: ', err.message);
+          return res.status(500).json({ error: err.message });
+        }
+  
+        db.run("COMMIT");
+        return res.status(200).json({ message: 'success' });
+      });
+    });
+  }
+  else {
+    console.error('Not allowed to change admin settings of this group');
+    return res.status(403).json({ error: 'Not allowed to change admin settings of this group' });
+  }
+});
+
+// Closings Endpoints
+app.get('/api/closings/:groupId', validateApiKey, validateToken, (req, res) => {
+  const groupId = req.params.groupId;
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.all(getClosingsByGroupId, [groupId], (err, rows) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not find closings of group: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.run("COMMIT");
+      return res.status(200).json({ message: 'success', closings: rows });
+    });
+  });
+});
+
+app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { period, closed, budget, pricePerKilometer, groupId } = req.body;
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    db.run(insertClosing, [period, closed, budget, pricePerKilometer, groupId], (err) => {
+      if (err) {
+        db.run("ROLLBACK");
+        console.error('Could not insert closing to group: ', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+
+      db.get(getLatestClosingByGroupId, [groupId], (err, closingRow) => {
+        if(err) {
+          db.run("ROLLBACK");
+          console.error('Could not get latest closing of group: ', err.message);
+          return res.status(500).json({ error: err.message });
+        }
+  
+        db.run("COMMIT");
+        return res.status(200).json({ message: 'success', closing: closingRow });
+      });
+    });
+  });
+});
+
+app.delete('/api/closings/:closingId/group/:groupId', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const closingId = req.params.closingId;
+  const groupId = req.params.groupId;
+
+  const token = req.headers['authorization'];
+  let groups = null;
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groups = decoded.groups;
+  });
+
+  const isMemberOfGroup = groups.find((group) => group.groupId === Number(groupId));
+
+  if(isMemberOfGroup) {
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+
+      db.run(deleteClosingByClosingIdAndGroupId, [closingId, groupId], (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          console.error('Could not delete closing from group: ', err.message);
+          return res.status(500).json({ error: err.message });
+        }
+
+        db.run("COMMIT");
+        return res.status(200).json({ message: 'success' });
+      });
+    });
+  }
+  else {
+    console.error('Not allowed to change closings of this group');
+    return res.status(403).json({ error: 'Not allowed to change closings of this group' });
+  }
+});
+
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 

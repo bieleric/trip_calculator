@@ -32,7 +32,7 @@ export const useFavoritesStore = defineStore('favoritesStore', {
                     oldFavorite.destination = favorite.destination;
                     oldFavorite.costs = favorite.costs;
                     oldFavorite.distance = favorite.distance;
-                    oldFavorite.single_trip = favorite.singleSingle;
+                    oldFavorite.single_trip = favorite.singleTrip ? 1 : 0;
                 }
             });
         },

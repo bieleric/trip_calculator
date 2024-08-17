@@ -3,8 +3,8 @@
     import { useRoute } from 'vue-router';
     import axios from 'axios';
     import router from '@/router';
-    import { fetchAllData } from '@/services/apiRequests';
-    import { signOut } from '@/services/helpers';
+    import { fetchAllDataByGroup } from '@/services/apiRequests';
+    import { signOut, getUser } from '@/services/helpers';
     import Button from '@/components/Button.vue';
 
     const invitationLink = ref('');
@@ -19,7 +19,7 @@
     const joinGroup = async () => {
         const token = invitationLink.value.split("/joinGroup/").pop()
         try { 
-            const response = await axios.post(`${backendHost}/api/users/joinGroup`, {
+            const response = await axios.post(`${backendHost}/api/groups/joinGroup`, {
                 invitationToken: token,
             }, {
                 headers: {
@@ -29,10 +29,14 @@
             });
             
             localStorage.setItem("jwt", response.data.token);
-            await fetchAllData();
+            const user = getUser();
+            const lastGroup = user.groups.at(-1)
+
+            await fetchAllDataByGroup(lastGroup.groupId);
             router.push('/'); 
 
         } catch (error) {
+            console.error(error);
             errorMessage.value = 'Ein Fehler ist aufgetreten.';
         }
     };

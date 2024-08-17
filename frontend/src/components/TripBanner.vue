@@ -145,6 +145,7 @@
         :isOpen="isDeleteModalOpen"
         :title="modalTitle"
         :text="deletionText"
+        confirmButtonText='Entfernen'
         @close="isDeleteModalOpen = false"
         @confirm="confirmDeletion()"
     />

@@ -11,6 +11,7 @@ import ClosingAdministrationOverviewView from '@/views/ClosingAdministrationOver
 import ClosingAdministrationView from '@/views/ClosingAdministrationView.vue';
 import ClosingView from '@/views/ClosingView.vue';
 import JoinGroupView from '@/views/JoinGroupView.vue';
+import GroupsView from '@/views/GroupsView.vue';
 import { useFavoritesStore } from '@/stores/favoritesStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
@@ -38,6 +39,14 @@ const router = createRouter({
       meta: {
         requiresAuth: true
       },
+    },
+    {
+      path: '/groups',
+      name: 'groups',
+      component: GroupsView,
+      meta: {
+        requiresAuth: true
+      }
     },
     {
       path: '/',

@@ -1,7 +1,7 @@
 <script setup>
   import { ref, onMounted } from 'vue';
   import { RouterView } from 'vue-router'
-  import { fetchAllData } from './services/apiRequests';
+  import { fetchAllDataByGroup } from './services/apiRequests';
   import { isTokenExpired, getUser } from './services/helpers';
   import { signOut } from './services/helpers';
   import router from './router';
@@ -9,9 +9,16 @@
   const loading = ref(true);
 
   const loadData = async () => {
+    // TODO: could cause an error due to always picking first group, should only fetch first group on signin
+    let groupId = '';
+    if(getUser()) {
+      groupId = getUser().groups.length > 0  ? getUser().groups[0].groupId : null;
+    }
+    
+    
     if (!isTokenExpired()) {
       try {
-        if(!getUser().groupId) {
+        if(!groupId) {
           const route = router.currentRoute.value;
           const token = route.params.token || null;
 
@@ -23,7 +30,7 @@
           return;
         }
 
-        await fetchAllData();
+        await fetchAllDataByGroup(groupId);
       } catch (err) {
         signOut();
       }

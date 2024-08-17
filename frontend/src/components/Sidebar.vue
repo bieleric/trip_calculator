@@ -43,6 +43,7 @@
                     <RouterLink  v-if="isAdmin()" to="financeAdministration"><li class="py-2">Finanzeinstellungen</li></RouterLink>
                     <RouterLink  v-if="isAdmin()" to="closingAdministrationOverview"><li class="py-2">Abschlussverwaltung</li></RouterLink>
                     <li class="pt-8 pb-3 text-orange-400 font-bold">Account</li>
+                    <RouterLink to="/groups"><li class="py-2">Gruppen</li></RouterLink>
                     <li class="py-2">Einstellungen</li>
                     <li class="py-2">App-Design</li>
                     <li class="py-2 cursor-pointer" @click="signOut()">Abmelden</li>

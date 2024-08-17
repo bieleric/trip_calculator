@@ -2,12 +2,14 @@
   import { ref } from 'vue';
   import BaseLayout from '@/layouts/BaseLayout.vue';
   import { createInvitation, removeUserFromGroup } from '@/services/apiRequests';
-  import { getUser, isSuperUser } from '@/services/helpers';
   import { useUserStore } from '@/stores/userStore';
   import ConfirmDeletionModal from '@/components/ConfirmDeletionModal.vue';
   import Button from '@/components/Button.vue';
+  import { useGroupAndRoleStore } from '@/stores/groupAndRoleStore';
 
   const userStore = useUserStore();
+  const groupAndRoleStore = useGroupAndRoleStore();
+  const groupId = groupAndRoleStore.getCurrentGroup.group_id;
 
   let invitationLink = ref('');
   let isDeleteModalOpen = ref(false);
@@ -23,13 +25,12 @@
   }
 
   const removeUserByEmail = (userId) => {
-    removeUserFromGroup(userId);
+    removeUserFromGroup(userId, groupId);
     isDeleteModalOpen.value = false;
   }
 
   const createInvitationLink = () => {
-    const currentUser = getUser();
-    createInvitation(currentUser.groupId)
+    createInvitation(groupId)
     .then(response => {
         invitationLink.value = response
         error.value = false;
@@ -39,6 +40,8 @@
         error.value = true;
     });
   }
+
+  // TODO: differentiate between active and inactive users
 </script>
 
 <template>
@@ -55,7 +58,7 @@
         </form>
       </div>
       <p class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3 mt-10">Aktiv</p>
-      <div v-for="user in userStore.getActiveUsers" class="w-full md:w-3/4 bg-zinc-700 px-2 py-3 mx-auto mb-4">
+      <div v-for="user in userStore.getAllUsers" class="w-full md:w-3/4 bg-zinc-700 px-2 py-3 mx-auto mb-4">
         <p class="text-xl">{{ user.name }}</p>
         <div class="grid grid-cols-8 mt-4 text-zinc-400 text-sm">
             <p class="col-span-6">E-Mail</p>
@@ -75,6 +78,7 @@
       :isOpen="isDeleteModalOpen"
       title='Nutzer entfernen'
       :text="deletionText"
+      confirmButtonText='Entfernen'
       @close="isDeleteModalOpen = false"
       @confirm="removeUserByEmail(userToDelete.id)"
     />

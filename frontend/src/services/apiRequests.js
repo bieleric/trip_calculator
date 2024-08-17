@@ -4,25 +4,28 @@ import { useUserStore } from "@/stores/userStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useAllTripsStore } from "@/stores/allTripsStore";
 import { useClosingsStore } from "@/stores/closingsStore";
+import { useGroupAndRoleStore } from "@/stores/groupAndRoleStore";
+import { getUser } from "./helpers";
 
 const apiKey = import.meta.env.VITE_API_KEY;
 const backendHost = import.meta.env.VITE_BACKEND;
 
-// fetch data
-export const fetchAllData = async () => {
+export const fetchAllDataByGroup = async (groupId) => {
     try {
-        await fetchAdminSettings();
-        await fetchAllUsers();
-        await fetchFavoritesOfUser();
-        await fetchClosings();
-        await fetchAllTrips();
+        await fetchAdminSettingsByGroup(groupId);
+        await fetchAllUsersByGroup(groupId);
+        await fetchFavoritesOfUserByGroup(groupId);
+        await fetchClosingsByGroup(groupId);
+        await fetchAllTripsByGroup(groupId);
+        await fetchGroupsOfUser();
     } catch (err) {
+        console.error('Could not fetch data: ', err)
         throw new Error('Could not fetch data');
     };
 }
 
-export const fetchAdminSettings = async () => {
-    return axios.get(`${backendHost}/api/adminSettings`, {
+export const fetchAdminSettingsByGroup = async (groupId) => {
+    return axios.get(`${backendHost}/api/adminSettings/${groupId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -38,8 +41,8 @@ export const fetchAdminSettings = async () => {
     });
 };
 
-export const fetchAllUsers = async () => {
-    return axios.get(`${backendHost}/api/users`, {
+export const fetchAllUsersByGroup = async (groupId) => {
+    return axios.get(`${backendHost}/api/users/${groupId}`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -47,7 +50,7 @@ export const fetchAllUsers = async () => {
     })
     .then(response => {
         const userStore = useUserStore();
-        userStore.setupUsersStore(response.data.users)
+        userStore.setupUsersStore(response.data.users);
     })
     .catch(err => {
         console.error('Fehler beim Abrufen der Daten:', err);
@@ -55,8 +58,8 @@ export const fetchAllUsers = async () => {
     });
 };
 
-export const fetchFavoritesOfUser = async () => {
-    return axios.get(`${backendHost}/api/favorites`, {
+export const fetchFavoritesOfUserByGroup = async (groupId) => {
+    return axios.get(`${backendHost}/api/favorites/${groupId}`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -72,8 +75,8 @@ export const fetchFavoritesOfUser = async () => {
     });
 };
 
-export const fetchAllTrips = async () => {
-    return axios.get(`${backendHost}/api/trips`, {
+export const fetchAllTripsByGroup = async (groupId) => {
+    return axios.get(`${backendHost}/api/trips/${groupId}`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -89,8 +92,8 @@ export const fetchAllTrips = async () => {
     });
 };
 
-export const fetchClosings = async () => {
-    return axios.get(`${backendHost}/api/closings`, {
+export const fetchClosingsByGroup = async (groupId) => {
+    return axios.get(`${backendHost}/api/closings/${groupId}`, {
       headers: {
         'x-api-key': apiKey,
         'Authorization': localStorage.getItem('jwt')
@@ -106,10 +109,28 @@ export const fetchClosings = async () => {
     });
 };
 
+export const fetchGroupsOfUser = async () => {
+    return axios.get(`${backendHost}/api/groups`, {
+      headers: {
+        'x-api-key': apiKey,
+        'Authorization': localStorage.getItem('jwt')
+      }
+    })
+    .then(response => {
+        const groupAndRoleStore = useGroupAndRoleStore();
+        groupAndRoleStore.setupGroupAndRoleStore(response.data.groups);
+    })
+    .catch(err => {
+        console.error('Fehler beim Abrufen der Daten:', err);
+        throw err;
+    });
+};
+
 // User Endpoints
-export const removeUserFromGroup = async (userId) => {
+export const removeUserFromGroup = async (userId, groupId) => {
     return axios.post(`${backendHost}/api/users/removeUser`, {
-        userId: userId
+        userId: userId,
+        groupId: groupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -126,6 +147,7 @@ export const removeUserFromGroup = async (userId) => {
     });
 };
 
+// TODO: is this still neccessary? -> Yes for account deletion
 export const deleteUser = async (userId) => {
     return axios.delete(`${backendHost}/api/users/${userId}`, {
         headers: {
@@ -143,8 +165,9 @@ export const deleteUser = async (userId) => {
     });
 };
 
+// Group endpoints
 export const createInvitation = async (groupId) => {
-    return axios.post(`${backendHost}/api/createInvitation`, {
+    return axios.post(`${backendHost}/api/groups/createInvitation`, {
         groupId: groupId
     }, {
         headers: {
@@ -161,10 +184,9 @@ export const createInvitation = async (groupId) => {
     });
 };
 
-export const joinGroup = async (token, email) => {
-    return axios.post(`${backendHost}/api/groups/joinGroup`, {
-        token: token,
-        email: email
+export const setSelectedGroup = async (groupId) => {
+    return axios.post(`${backendHost}/api/groups/select`, {
+        groupId: groupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -172,7 +194,8 @@ export const joinGroup = async (token, email) => {
         }
     })
     .then(response => {
-        console.log(response.data);
+        const groupAndRoleStore = useGroupAndRoleStore();
+        groupAndRoleStore.updateCurrentGroupAndRole(groupId);
     })
     .catch(err => {
         console.error('Fehler beim Beitreten der Gruppe:', err);
@@ -180,9 +203,37 @@ export const joinGroup = async (token, email) => {
     });
 };
 
+export const leaveGroupByGroupId = async (groupId) => {
+    return axios.post(`${backendHost}/api/groups/leave`, {
+        groupId: groupId
+    }, {
+        headers: {
+            'x-api-key': apiKey,
+            'Authorization': localStorage.getItem('jwt')
+        }
+    })
+    .then(response => {
+        const groupAndRoleStore = useGroupAndRoleStore();
+        groupAndRoleStore.removeGroupByGroupId(groupId);
+    })
+    .catch(err => {
+        console.error('Fehler beim Verlassen der Gruppe:', err);
+        throw err;
+    });
+};
+
 // Trip Endpoints
-export const addTrip = async (transport, start, destination, costs, distance, singleTrip, date, favorites) => {
+// Add new trip to group with favorite or without
+export const addTripToGroup = async (transport, start, destination, costs, distance, singleTrip, date, favorites) => {
+    const currentUser = getUser();
+    const userStore = useUserStore();
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+    const userName = userStore.getAllUsers.find((user) => user.id === currentUser.userId).name;
+
     return axios.post(`${backendHost}/api/trips`, {
+        groupId: currentGroupId,
+        userName: userName,
         transport: transport,
         start: start,
         destination: destination,
@@ -212,8 +263,11 @@ export const addTrip = async (transport, start, destination, costs, distance, si
     });
 };
 
-export const deleteTrip = async (id) => {
-    return axios.delete(`${backendHost}/api/trips/${id}`, {
+export const deleteTrip = async (tripId) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
+    return axios.delete(`${backendHost}/api/trips/${tripId}/group/${currentGroupId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -221,7 +275,7 @@ export const deleteTrip = async (id) => {
     })
     .then(response => {
         const allTripsStore = useAllTripsStore();
-        allTripsStore.deleteTrip(id);
+        allTripsStore.deleteTrip(tripId);
     })
     .catch(err => {
         console.error('Fehler beim Löschen der Fahrt:', err);
@@ -229,8 +283,11 @@ export const deleteTrip = async (id) => {
     });
 };
 
-export const updateTrip = async (id, transport, start, destination, costs, distance, singleTrip, date) => {
-    return axios.post(`${backendHost}/api/trips/${id}`, {
+export const updateTrip = async (tripId, transport, start, destination, costs, distance, singleTrip, date) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
+    return axios.post(`${backendHost}/api/trips/${tripId}`, {
         transport: transport,
         start: start,
         destination: destination,
@@ -238,6 +295,7 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
         distance: distance,
         date: date,
         singleTrip: singleTrip ? 1 : 0,
+        groupId: currentGroupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -247,7 +305,7 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
     .then(response => {
         const allTripsStore = useAllTripsStore();
         allTripsStore.updateTrip({
-            id: id,
+            id: tripId,
             transport: transport,
             start: start,
             destination: destination,
@@ -264,8 +322,11 @@ export const updateTrip = async (id, transport, start, destination, costs, dista
 };
 
 // Favorites Endpoints
-export const deleteFavorite = async (id) => {
-    return axios.delete(`${backendHost}/api/favorites/${id}`, {
+export const deleteFavorite = async (favoriteId) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
+    return axios.delete(`${backendHost}/api/favorites/${favoriteId}/group/${currentGroupId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -273,7 +334,7 @@ export const deleteFavorite = async (id) => {
     })
     .then(response => {
         const favoritesStore = useFavoritesStore();
-        favoritesStore.deleteFavorite(id);
+        favoritesStore.deleteFavorite(favoriteId);
     })
     .catch(err => {
         console.error('Fehler beim Löschen des Favoriten:', err);
@@ -282,6 +343,9 @@ export const deleteFavorite = async (id) => {
 };
 
 export const updateFavorite = async (id, transport, start, destination, costs, distance, singleTrip) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
     return axios.post(`${backendHost}/api/favorites/${id}`, {
         transport: transport,
         start: start,
@@ -289,6 +353,7 @@ export const updateFavorite = async (id, transport, start, destination, costs, d
         costs: costs,
         distance: distance,
         singleTrip: singleTrip,
+        groupId: currentGroupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -315,9 +380,13 @@ export const updateFavorite = async (id, transport, start, destination, costs, d
 
 // Admin Settings Endpoints
 export const updateFinanceSettings = async (budget, pricePerKilometer) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
     return axios.post(`${backendHost}/api/adminSettings`, {
         budget: budget,
         pricePerKilometer: pricePerKilometer,
+        groupId: currentGroupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -339,11 +408,15 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
 
 // Closings Endpoints
 export const addClosing = async (period, budget, pricePerKilometer) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
     return axios.post(`${backendHost}/api/closings`, {
         period: period,
         closed: 1,
         budget: budget,
-        pricePerKilometer: pricePerKilometer
+        pricePerKilometer: pricePerKilometer,
+        groupId: currentGroupId
     }, {
         headers: {
             'x-api-key': apiKey,
@@ -360,8 +433,11 @@ export const addClosing = async (period, budget, pricePerKilometer) => {
     });
 };
 
-export const deleteClosing = async (id) => {
-    return axios.delete(`${backendHost}/api/closings/${id}`, {
+export const deleteClosing = async (closingId) => {
+    const groupAndRoleStore = useGroupAndRoleStore();
+    const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+
+    return axios.delete(`${backendHost}/api/closings/${closingId}/group/${currentGroupId}`, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -369,7 +445,7 @@ export const deleteClosing = async (id) => {
     })
     .then(response => {
         const closingsStore = useClosingsStore();
-        closingsStore.deleteClosing(id);
+        closingsStore.deleteClosing(closingId);
     })
     .catch(err => {
         console.error('Fehler beim Löschen des Abschlusses:', err);

@@ -1,8 +1,9 @@
 <script setup>
-    defineProps({
+    const props = defineProps({
         isOpen: Boolean,
         title: String,
-        text: String
+        text: String,
+        confirmButtonText: String
     });
 
     const emit = defineEmits(['close', 'confirm']);
@@ -27,7 +28,7 @@
         </div>
         <div class="p-4 flex justify-end space-x-2">
             <p @click="closeModal" class="px-3 py-2 text-zinc-400 cursor-pointer">Abbrechen</p>
-            <p @click="confirmDelete" class="px-3 py-2 text-red-500 cursor-pointer">Entfernen</p>
+            <p @click="confirmDelete" class="px-3 py-2 text-red-500 cursor-pointer">{{ props.confirmButtonText }}</p>
         </div>
         </div>
     </div>
