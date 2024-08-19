@@ -8,7 +8,8 @@ const { checkDatabaseAndCreateTables } = require('./services/initializeDatabase.
 const { initializeCronJobForUpdatingClosings } = require('./services/cronJobs.js');
 const { validateApiKey, validateToken, authorizeAdmin } = require('./services/middleware.js');
 const { jwtKey, port } = require('./services/constants.js');
-const { getUserByEmail, insertUser, getUserIdByEmail, insertGroupMember, getGroupsByUserId, getGroupsAndUserInformationByUserId, getAdminSettingsByGroupId, getUsersByGroupId, getFavoritesByUserIdAndGroupId, getTripsByGroupId, getClosingsByGroupId, resetSelectedGroupByUserId, setSelectedGroupByUserIdAndGroupId, insertInvitation, getInvitationByToken, setInvitationAsUsed, deleteUserFromGroupByUserIdAndGroupId, insertFavorite, getLatestFavorite, insertTrip, getLatestTrip, deleteTripByUserIdAndTripIdAndGroupId, updateTripByUserIdAndTripIdAndGroupId, deleteFavoriteByUserIdAndTripIdAndGroupId, updateFavoriteByUserIdAndTripIdAndGroupId, updateAdminSettingsByGroupId, insertClosing, getLatestClosingByGroupId, deleteClosingByClosingIdAndGroupId, updateClosingByClosingIdAndGroupId } = require('./services/databaseQueries.js');
+const { getUserByEmail, insertUser, insertGroupMember, getGroupsByUserId, getGroupsAndUserInformationByUserId, getAdminSettingsByGroupId, getUsersByGroupId, getFavoritesByUserIdAndGroupId, getTripsByGroupId, getClosingsByGroupId, resetSelectedGroupByUserId, setSelectedGroupByUserIdAndGroupId, insertInvitation, getInvitationByToken, setInvitationAsUsed, deleteUserFromGroupByUserIdAndGroupId, insertFavorite, getLatestFavorite, insertTrip, getLatestTrip, deleteTripByUserIdAndTripIdAndGroupId, updateTripByUserIdAndTripIdAndGroupId, deleteFavoriteByUserIdAndTripIdAndGroupId, updateFavoriteByUserIdAndTripIdAndGroupId, updateAdminSettingsByGroupId, updateClosingByClosingIdAndGroupId } = require('./services/databaseQueries.js');
+const { initializeDatabaseTriggers } = require('./services/triggers.js');
 
 const app = express();
 app.use(express.json());
@@ -28,6 +29,7 @@ const db = new sqlite3.Database('../trip_calculator.db', (err) => {
 
 checkDatabaseAndCreateTables(db);
 initializeCronJobForUpdatingClosings(db);
+initializeDatabaseTriggers(db);
 
 // Sign Up Endpoints
 app.post('/signUp', async (req, res) => {

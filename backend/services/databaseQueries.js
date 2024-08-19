@@ -119,7 +119,7 @@ const createAdminSettingsTable = `CREATE TABLE admin_settings (
 
 const createClosingsTable = `CREATE TABLE closings (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    period TIMESTAMP NOT NULL UNIQUE, 
+    period TIMESTAMP NOT NULL, 
     closed INTEGER NOT NULL, 
     budget REAL NOT NULL, 
     price_per_kilometer REAL NOT NULL, 
@@ -314,6 +314,42 @@ const deleteClosingByClosingIdAndGroupId = `DELETE FROM closings
     WHERE id = ? AND group_id = ?
 `;
 
+// trigger
+const createTriggerForGroupCreation = `CREATE TRIGGER IF NOT EXISTS insert_closings_on_group_creation
+  AFTER INSERT ON groups
+  BEGIN
+    INSERT INTO closings (period, closed, budget, price_per_kilometer, group_id) 
+    VALUES (
+      CASE strftime('%w', 'now', 'start of month')
+        WHEN '0' THEN 'Sun'
+        WHEN '1' THEN 'Mon'
+        WHEN '2' THEN 'Tue'
+        WHEN '3' THEN 'Wed'
+        WHEN '4' THEN 'Thu'
+        WHEN '5' THEN 'Fri'
+        WHEN '6' THEN 'Sat'
+      END || ' ' || 
+      substr('JanFebMarAprMayJunJulAugSepOctNovDec', 1 + 3*cast(strftime('%m', 'now', 'start of month') as int) - 3, 3) || 
+      ' ' || strftime('%d %Y', 'now', 'start of month'), 0, 0, 0.0, NEW.id
+    );
+
+    INSERT INTO closings (period, closed, budget, price_per_kilometer, group_id) 
+    VALUES (
+      CASE strftime('%w', 'now', 'start of month', '+1 month')
+        WHEN '0' THEN 'Sun'
+        WHEN '1' THEN 'Mon'
+        WHEN '2' THEN 'Tue'
+        WHEN '3' THEN 'Wed'
+        WHEN '4' THEN 'Thu'
+        WHEN '5' THEN 'Fri'
+        WHEN '6' THEN 'Sat'
+      END || ' ' || 
+      substr('JanFebMarAprMayJunJulAugSepOctNovDec', 1 + 3*cast(strftime('%m', 'now', 'start of month', '+1 month') as int) - 3, 3) || 
+      ' ' || strftime('%d %Y', 'now', 'start of month', '+1 month'), 0, 0, 0.0, NEW.id
+    );
+  END;
+`;
+
 
 module.exports = {
     getRolesTable: getRolesTable,
@@ -369,5 +405,6 @@ module.exports = {
     getLatestClosingByGroupId: getLatestClosingByGroupId,
     deleteClosingByClosingIdAndGroupId: deleteClosingByClosingIdAndGroupId,
     getAllGroups: getAllGroups,
-    updateClosingByClosingIdAndGroupId: updateClosingByClosingIdAndGroupId
+    updateClosingByClosingIdAndGroupId: updateClosingByClosingIdAndGroupId,
+    createTriggerForGroupCreation: createTriggerForGroupCreation
 };
