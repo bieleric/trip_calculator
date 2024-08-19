@@ -209,6 +209,10 @@ const updateAdminSettingsByGroupId = `UPDATE admin_settings
     WHERE group_id = ?
 `;
 
+const updateClosingByClosingIdAndGroupId = `UPDATE closings 
+    SET closed = ? 
+    WHERE id = ? AND group_id = ?
+`;
 
 // gets
 const getUserIdByEmail = `SELECT user_id 
@@ -255,6 +259,7 @@ const getTripsByGroupId = `SELECT *
 const getClosingsByGroupId = `SELECT * 
     FROM closings 
     WHERE group_id = ?
+    ORDER BY createdAt DESC
 `;
 
 const getGroupsByUserId = `SELECT groups.id AS group_id, groups.name AS group_name, group_members.selected, roles.id AS role_id, roles.role_name AS role_name
@@ -285,7 +290,11 @@ const getLatestTrip = `SELECT *
 const getLatestClosingByGroupId = `SELECT * 
     FROM closings
     WHERE group_id = ?
-    ORDER BY id DESC LIMIT 1
+    ORDER BY createdAt DESC LIMIT 1
+`;
+
+const getAllGroups = `SELECT *
+    FROM groups
 `;
 
 // deletes
@@ -358,5 +367,7 @@ module.exports = {
     updateAdminSettingsByGroupId: updateAdminSettingsByGroupId,
     insertClosing: insertClosing,
     getLatestClosingByGroupId: getLatestClosingByGroupId,
-    deleteClosingByClosingIdAndGroupId: deleteClosingByClosingIdAndGroupId
+    deleteClosingByClosingIdAndGroupId: deleteClosingByClosingIdAndGroupId,
+    getAllGroups: getAllGroups,
+    updateClosingByClosingIdAndGroupId: updateClosingByClosingIdAndGroupId
 };

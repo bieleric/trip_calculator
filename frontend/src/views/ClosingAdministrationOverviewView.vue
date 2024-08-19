@@ -13,19 +13,7 @@
     }
   });
 
-  const allTripsStore = useAllTripsStore();
   const closingsStore = useClosingsStore();
-
-  const isClosed = (period) => {
-    const month = period.split(' ')[0];
-    const monthNumeral = getMonthsNames().indexOf(month) + 1;
-    const year = period.split(' ')[1];
-    const dateString = `${monthNumeral}-01-${year}`;
-    const foundClosing = closingsStore.getAllClosings.find((closing) => {
-      return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
-    });
-    return !!foundClosing;
-  };
 </script>
 
 <template>
@@ -33,16 +21,16 @@
     <div class="closing">
       <p v-if="props.userClosings" class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschluss</p>
       <p v-else class="text-2xl w-11/12 md:w-3/4 mx-auto mb-3">Abschlussverwaltung</p>
-      <div v-for="month in allTripsStore.getAllTripsClassifiedByMonthAndYear" class="w-11/12 md:w-3/4 mx-auto mb-3 border-b text-lg">
+      <div v-for="closing in closingsStore.getAllClosings" class="w-11/12 md:w-3/4 mx-auto mb-3 border-b text-lg">
         <RouterLink :to="{
           name: props.userClosings ? 'closing' : 'closingAdministration', 
           query: {
-            monthName: month.title,
+            monthName: closing.monthYearString,
           }
         }">
           <p class="flex justify-between p-3">
-            <span>{{ month.title }} </span>
-            <span v-if="isClosed(month.title)">
+            <span>{{ closing.monthYearString }} </span>
+            <span v-if="closing.closed">
               <FontAwesomeIcon :icon="faCircleCheck" />
             </span>
           </p>

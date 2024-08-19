@@ -31,7 +31,7 @@
         return closingsStore.getAllClosings.find((closing) => {
             const closingMonth = new Date(closing.period).getMonth();
             const closingYear = new Date(closing.period).getFullYear();
-            return closingMonth === month && closingYear === year;
+            return closingMonth === month && closingYear === year && closing.closed === 1;
         });
     };
 

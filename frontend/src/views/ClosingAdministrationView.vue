@@ -10,7 +10,7 @@
   import { useAllTripsStore } from '@/stores/allTripsStore';
   import { useClosingsStore } from '@/stores/closingsStore';
   import { useUserStore } from '@/stores/userStore';
-  import { addClosing, deleteClosing } from '@/services/apiRequests';
+  import { closeClosing, openClosing } from '@/services/apiRequests';
   import { getMonthsNames } from '@/services/helpers';
 
   const settingsStore = useSettingsStore();
@@ -36,11 +36,11 @@
   const dateString = `${monthNumeral}-01-${year}`;
 
   const isClosed = computed(() => {
-    const foundClosing = closingsStore.getAllClosings.find((closing) => {
-      return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
+    const foundClosedClosing = closingsStore.getAllClosings.find((closing) => {
+      return closing.monthYearString === props.monthName && closing.closed === 1;
     });
-    if (foundClosing) {
-      closing.value = foundClosing;
+    if (foundClosedClosing) {
+      closing.value = foundClosedClosing;
       buttonText.value = 'Abgeschlossen';
       return true;
     } else {
@@ -69,10 +69,10 @@
 
   const closeMonth = () => {
     const foundClosing = closingsStore.getAllClosings.find((closing) => {
-      return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
+      return closing.monthYearString === props.monthName;
     });
-    if (foundClosing) {
-      deleteClosing(foundClosing.id)
+    if (foundClosing.closed) {
+      openClosing(foundClosing.id)
       .then(response => {
           error.value = false;
       })
@@ -82,12 +82,12 @@
       });
     } 
     else {
-      const period = new Date(dateString).toDateString();
-      addClosing(period, settingsStore.getBudget, settingsStore.getPricePerKilometer)
+      closeClosing(foundClosing.id)
       .then(response => {
           error.value = false;
       })
       .catch(err => {
+        console.log(err)
           message.value = "Fehler! Abschluss konnte nicht durchgeführt werden.";
           error.value = true;
       });
@@ -96,7 +96,6 @@
 
   const getUserOfClosing = (user) => {
     const foundUser = userStore.getAllUsers.find(userObject => userObject.id === user.userId);
-
     return foundUser ? user.title + ' (' + user.trips.length + ')' : user.title + ' (' + user.trips.length + ') [entfernt]' 
   }
 </script>

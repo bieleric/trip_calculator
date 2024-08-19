@@ -94,3 +94,8 @@ export const getMonthsNames = () => ['Januar', 'Februar', 'März', 'April', 'Mai
 export const getMonthAsNumeral = (monthAsString) => {
   return getMonthsNames().indexOf(monthAsString) + 1;
 }
+
+export const formatDateToMonthYear = (dateString) => {
+  const date = new Date(dateString);
+  return `${getMonthsNames()[date.getMonth()]} ${date.getFullYear()}`;
+}

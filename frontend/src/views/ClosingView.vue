@@ -26,7 +26,7 @@
 
   const isClosed = computed(() => {
     return closingsStore.getAllClosings.find((closing) => {
-      return new Date(closing.period).toDateString() === new Date(dateString).toDateString();
+      return closing.monthYearString === props.monthName && closing.closed === 1;
     });
   });
 

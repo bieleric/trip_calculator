@@ -1,3 +1,4 @@
+import { formatDateToMonthYear } from '@/services/helpers'
 import { defineStore } from 'pinia'
 
 const getDefaultState = () => {
@@ -23,14 +24,16 @@ export const useClosingsStore = defineStore('closingsStore', {
     actions: {
         setupClosingsStore(data) {
             data.forEach((closing) => {
+                closing['monthYearString'] = formatDateToMonthYear(closing.period);
                 this.closings.push(closing);
-            })
+            });
         },
-        addClosing(data) {
-            this.closings.push(data);
-        },
-        deleteClosing(id) {
-            this.closings = this.closings.filter(closing => closing.id !== id);
+        updateClosingByClosingId(closingId, closed) {
+            this.closings.forEach((closing) => {
+                if(closing.id === closingId) {
+                    closing.closed = closed;
+                }
+            });
         },
         resetStore() {
             Object.assign(this, getDefaultState());

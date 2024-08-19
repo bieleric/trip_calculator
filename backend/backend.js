@@ -4,11 +4,11 @@ const path = require('path');
 const bcryptjs = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-
 const { checkDatabaseAndCreateTables } = require('./services/initializeDatabase.js');
+const { initializeCronJobForUpdatingClosings } = require('./services/cronJobs.js');
 const { validateApiKey, validateToken, authorizeAdmin } = require('./services/middleware.js');
 const { jwtKey, port } = require('./services/constants.js');
-const { getUserByEmail, insertUser, getUserIdByEmail, insertGroupMember, getGroupsByUserId, getGroupsAndUserInformationByUserId, getAdminSettingsByGroupId, getUsersByGroupId, getFavoritesByUserIdAndGroupId, getTripsByGroupId, getClosingsByGroupId, resetSelectedGroupByUserId, setSelectedGroupByUserIdAndGroupId, insertInvitation, getInvitationByToken, setInvitationAsUsed, deleteUserFromGroupByUserIdAndGroupId, insertFavorite, getLatestFavorite, insertTrip, getLatestTrip, deleteTripByUserIdAndTripIdAndGroupId, updateTripByUserIdAndTripIdAndGroupId, deleteFavoriteByUserIdAndTripIdAndGroupId, updateFavoriteByUserIdAndTripIdAndGroupId, updateAdminSettingsByGroupId, insertClosing, getLatestClosingByGroupId, deleteClosingByClosingIdAndGroupId } = require('./services/databaseQueries.js');
+const { getUserByEmail, insertUser, getUserIdByEmail, insertGroupMember, getGroupsByUserId, getGroupsAndUserInformationByUserId, getAdminSettingsByGroupId, getUsersByGroupId, getFavoritesByUserIdAndGroupId, getTripsByGroupId, getClosingsByGroupId, resetSelectedGroupByUserId, setSelectedGroupByUserIdAndGroupId, insertInvitation, getInvitationByToken, setInvitationAsUsed, deleteUserFromGroupByUserIdAndGroupId, insertFavorite, getLatestFavorite, insertTrip, getLatestTrip, deleteTripByUserIdAndTripIdAndGroupId, updateTripByUserIdAndTripIdAndGroupId, deleteFavoriteByUserIdAndTripIdAndGroupId, updateFavoriteByUserIdAndTripIdAndGroupId, updateAdminSettingsByGroupId, insertClosing, getLatestClosingByGroupId, deleteClosingByClosingIdAndGroupId, updateClosingByClosingIdAndGroupId } = require('./services/databaseQueries.js');
 
 const app = express();
 app.use(express.json());
@@ -27,6 +27,7 @@ const db = new sqlite3.Database('../trip_calculator.db', (err) => {
 });
 
 checkDatabaseAndCreateTables(db);
+initializeCronJobForUpdatingClosings(db);
 
 // Sign Up Endpoints
 app.post('/signUp', async (req, res) => {
@@ -696,36 +697,8 @@ app.get('/api/closings/:groupId', validateApiKey, validateToken, (req, res) => {
   });
 });
 
-app.post('/api/closings', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { period, closed, budget, pricePerKilometer, groupId } = req.body;
-
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION");
-
-    db.run(insertClosing, [period, closed, budget, pricePerKilometer, groupId], (err) => {
-      if (err) {
-        db.run("ROLLBACK");
-        console.error('Could not insert closing to group: ', err.message);
-        return res.status(500).json({ error: err.message });
-      }
-
-      db.get(getLatestClosingByGroupId, [groupId], (err, closingRow) => {
-        if(err) {
-          db.run("ROLLBACK");
-          console.error('Could not get latest closing of group: ', err.message);
-          return res.status(500).json({ error: err.message });
-        }
-  
-        db.run("COMMIT");
-        return res.status(200).json({ message: 'success', closing: closingRow });
-      });
-    });
-  });
-});
-
-app.delete('/api/closings/:closingId/group/:groupId', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const closingId = req.params.closingId;
-  const groupId = req.params.groupId;
+app.post('/api/closings/close', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { closingId, groupId } = req.body;
 
   const token = req.headers['authorization'];
   let groups = null;
@@ -738,16 +711,42 @@ app.delete('/api/closings/:closingId/group/:groupId', validateApiKey, validateTo
 
   if(isMemberOfGroup) {
     db.serialize(() => {
-      db.run("BEGIN TRANSACTION");
-
-      db.run(deleteClosingByClosingIdAndGroupId, [closingId, groupId], (err) => {
+      db.run(updateClosingByClosingIdAndGroupId, [1, closingId, groupId], (err) => {
         if (err) {
-          db.run("ROLLBACK");
-          console.error('Could not delete closing from group: ', err.message);
+          console.error('Could not close closing of group: ', err.message);
           return res.status(500).json({ error: err.message });
         }
+  
+        return res.status(200).json({ message: 'success' });
+      });
+    });
+  }
+  else {
+    console.error('Not allowed to change closings of this group');
+    return res.status(403).json({ error: 'Not allowed to change closings of this group' });
+  }
+});
 
-        db.run("COMMIT");
+app.post('/api/closings/open', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
+  const { closingId, groupId } = req.body;
+
+  const token = req.headers['authorization'];
+  let groups = null;
+  
+  jwt.verify(token, jwtKey, (err, decoded) => {
+    groups = decoded.groups;
+  });
+
+  const isMemberOfGroup = groups.find((group) => group.groupId === Number(groupId));
+
+  if(isMemberOfGroup) {
+    db.serialize(() => {
+      db.run(updateClosingByClosingIdAndGroupId, [0, closingId, groupId], (err) => {
+        if (err) {
+          console.error('Could not open closing of group: ', err.message);
+          return res.status(500).json({ error: err.message });
+        }
+  
         return res.status(200).json({ message: 'success' });
       });
     });

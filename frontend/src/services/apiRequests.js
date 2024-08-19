@@ -407,15 +407,12 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
 };
 
 // Closings Endpoints
-export const addClosing = async (period, budget, pricePerKilometer) => {
+export const closeClosing = async (closingId) => {
     const groupAndRoleStore = useGroupAndRoleStore();
     const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
 
-    return axios.post(`${backendHost}/api/closings`, {
-        period: period,
-        closed: 1,
-        budget: budget,
-        pricePerKilometer: pricePerKilometer,
+    return axios.post(`${backendHost}/api/closings/close`, {
+        closingId: closingId,
         groupId: currentGroupId
     }, {
         headers: {
@@ -425,19 +422,22 @@ export const addClosing = async (period, budget, pricePerKilometer) => {
     })
     .then(response => {
         const closingStore = useClosingsStore();
-        closingStore.addClosing(response.data.closing);
+        closingStore.updateClosingByClosingId(closingId, 1);
     })
     .catch(err => {
-        console.error('Fehler beim Hinzufügen des Abschlusses:', err);
+        console.error('Fehler beim Schließen des Abschlusses:', err);
         throw err;
     });
 };
 
-export const deleteClosing = async (closingId) => {
+export const openClosing = async (closingId) => {
     const groupAndRoleStore = useGroupAndRoleStore();
     const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
 
-    return axios.delete(`${backendHost}/api/closings/${closingId}/group/${currentGroupId}`, {
+    return axios.post(`${backendHost}/api/closings/open`, {
+        closingId: closingId,
+        groupId: currentGroupId
+    }, {
         headers: {
             'x-api-key': apiKey,
             'Authorization': localStorage.getItem('jwt')
@@ -445,10 +445,10 @@ export const deleteClosing = async (closingId) => {
     })
     .then(response => {
         const closingsStore = useClosingsStore();
-        closingsStore.deleteClosing(closingId);
+        closingsStore.updateClosingByClosingId(closingId, 0);
     })
     .catch(err => {
-        console.error('Fehler beim Löschen des Abschlusses:', err);
+        console.error('Fehler beim Öffnen des Abschlusses:', err);
         throw err;
     });
 };
