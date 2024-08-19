@@ -9,12 +9,10 @@
   const loading = ref(true);
 
   const loadData = async () => {
-    // TODO: could cause an error due to always picking first group, should only fetch first group on signin
     let groupId = '';
     if(getUser()) {
       groupId = getUser().groups.length > 0  ? getUser().groups[0].groupId : null;
     }
-    
     
     if (!isTokenExpired()) {
       try {
@@ -24,6 +22,9 @@
 
           if(token) {
             router.push({ name: 'joinGroup', params: { token } });
+          }
+          else {
+            router.push({ name: 'joinGroup' })
           }
 
           loading.value = false;
