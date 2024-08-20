@@ -210,7 +210,7 @@ const updateAdminSettingsByGroupId = `UPDATE admin_settings
 `;
 
 const updateClosingByClosingIdAndGroupId = `UPDATE closings 
-    SET closed = ? 
+    SET closed = ?, price_per_kilometer = ?, budget = ?
     WHERE id = ? AND group_id = ?
 `;
 

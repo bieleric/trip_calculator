@@ -700,7 +700,7 @@ app.get('/api/closings/:groupId', validateApiKey, validateToken, (req, res) => {
 });
 
 app.post('/api/closings/close', validateApiKey, validateToken, authorizeAdmin, (req, res) => {
-  const { closingId, groupId } = req.body;
+  const { closingId, pricePerKilometer, budget, groupId } = req.body;
 
   const token = req.headers['authorization'];
   let groups = null;
@@ -713,7 +713,7 @@ app.post('/api/closings/close', validateApiKey, validateToken, authorizeAdmin, (
 
   if(isMemberOfGroup) {
     db.serialize(() => {
-      db.run(updateClosingByClosingIdAndGroupId, [1, closingId, groupId], (err) => {
+      db.run(updateClosingByClosingIdAndGroupId, [1, pricePerKilometer, budget, closingId, groupId], (err) => {
         if (err) {
           console.error('Could not close closing of group: ', err.message);
           return res.status(500).json({ error: err.message });
@@ -743,7 +743,7 @@ app.post('/api/closings/open', validateApiKey, validateToken, authorizeAdmin, (r
 
   if(isMemberOfGroup) {
     db.serialize(() => {
-      db.run(updateClosingByClosingIdAndGroupId, [0, closingId, groupId], (err) => {
+      db.run(updateClosingByClosingIdAndGroupId, [0, 0, 0, closingId, groupId], (err) => {
         if (err) {
           console.error('Could not open closing of group: ', err.message);
           return res.status(500).json({ error: err.message });

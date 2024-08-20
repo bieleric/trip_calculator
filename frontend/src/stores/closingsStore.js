@@ -28,10 +28,12 @@ export const useClosingsStore = defineStore('closingsStore', {
                 this.closings.push(closing);
             });
         },
-        updateClosingByClosingId(closingId, closed) {
+        updateClosingByClosingId(closingId, pricePerKilometer, budget, closed) {
             this.closings.forEach((closing) => {
                 if(closing.id === closingId) {
                     closing.closed = closed;
+                    closing.price_per_kilometer = pricePerKilometer,
+                    closing.budget = budget
                 }
             });
         },

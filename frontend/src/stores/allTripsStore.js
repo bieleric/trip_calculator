@@ -10,6 +10,8 @@ const getDefaultState = () => {
     }
 }
 
+// TODO: better naming in this store and depending variables -> refactoring probably useful
+
 export const useAllTripsStore = defineStore('allTripsStore', {
     state: () => getDefaultState(),
     getters: {
@@ -154,7 +156,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
                 const tripsOfMonth = state.getAllTripsClassifiedByMonthAndYear.find(month => month.title === monthName);
                 const [month, year] = monthName.split(' ');
                 const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
-                const pricePerKilometer = closing ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
+                const pricePerKilometer = closing.closed ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
                 let costsOfMonth = 0;
 
                 if(tripsOfMonth) {
@@ -219,7 +221,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
 
             return (userObject, month, year) => {
                 const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
-                const pricePerKilometer = closing ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
+                const pricePerKilometer = closing.closed ? closing.price_per_kilometer : settingsStore.getPricePerKilometer;
                 const classifiedByUser = state.getTripsClassifiedByUserForMonthAndYear(month, year);
                 let costs = 0;
 
@@ -242,9 +244,10 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             const settingsStore = useSettingsStore();
             const closingsStore = useClosingsStore();
 
+            // TODO: probably using budget of closing is a bad idea -> differenciate: use current finance settings if open and closing budget if closing is already closed 
             return (userObject, month, year) => {
                 const closing = closingsStore.getClosingByMonthAndYear(getMonthAsNumeral(month), Number(year));
-                const budget = closing ? closing.budget : settingsStore.getBudget;
+                const budget = closing.closed ? closing.budget : settingsStore.getBudget;
                 const costsOfMonthByMonthName = state.getCostsOfMonthByMonthName(month + ' ' + year);
                 const costsByUserForMonth = state.getCostsByUserForMonth(userObject, month, year);
                 if(budget === 0 || costsOfMonthByMonthName <= budget) {
@@ -260,7 +263,7 @@ export const useAllTripsStore = defineStore('allTripsStore', {
             return (userObject, month, year) => {
                 const tripsOfUser = state.getTripsClassifiedByUserForMonthAndYear(month, year).find(tripsOfUser => tripsOfUser.userId === userObject.userId);
                 const pending = state.getPendingAmountOfMoneyByUserForMonth(userObject, month, year);
-                const costs = state.getCostsByUserForMonth(userObject, month, year)
+                const costs = state.getCostsByUserForMonth(userObject, month, year);
 
                 return {
                     userName: tripsOfUser ? tripsOfUser.title : '',

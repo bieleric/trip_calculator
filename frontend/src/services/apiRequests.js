@@ -410,9 +410,12 @@ export const updateFinanceSettings = async (budget, pricePerKilometer) => {
 export const closeClosing = async (closingId) => {
     const groupAndRoleStore = useGroupAndRoleStore();
     const currentGroupId = groupAndRoleStore.getCurrentGroup.group_id;
+    const settingsStore = useSettingsStore();
 
     return axios.post(`${backendHost}/api/closings/close`, {
         closingId: closingId,
+        pricePerKilometer: settingsStore.getPricePerKilometer,
+        budget: settingsStore.getBudget,
         groupId: currentGroupId
     }, {
         headers: {
@@ -422,7 +425,7 @@ export const closeClosing = async (closingId) => {
     })
     .then(response => {
         const closingStore = useClosingsStore();
-        closingStore.updateClosingByClosingId(closingId, 1);
+        closingStore.updateClosingByClosingId(closingId, settingsStore.getPricePerKilometer, settingsStore.getBudget, 1);
     })
     .catch(err => {
         console.error('Fehler beim Schließen des Abschlusses:', err);
@@ -445,7 +448,7 @@ export const openClosing = async (closingId) => {
     })
     .then(response => {
         const closingsStore = useClosingsStore();
-        closingsStore.updateClosingByClosingId(closingId, 0);
+        closingsStore.updateClosingByClosingId(closingId, 0, 0, 0);
     })
     .catch(err => {
         console.error('Fehler beim Öffnen des Abschlusses:', err);
