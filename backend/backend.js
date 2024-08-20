@@ -1,4 +1,6 @@
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcryptjs = require('bcryptjs');
@@ -13,6 +15,19 @@ const { initializeDatabaseTriggers } = require('./services/triggers.js');
 
 const app = express();
 app.use(express.json());
+
+// Helmet sets different safety-headers
+app.use(helmet());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // maximum of 100 requests per IP in 15 minutes
+  message: 'Too many requests from this IP, please try again later.',
+  headers: true, // adds rate-limit-header
+});
+
+// Apply rate-limit to all requests
+app.use(limiter);
 
 const db = new sqlite3.Database('../trip_calculator.db', (err) => {
   if (err) {
